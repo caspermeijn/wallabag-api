@@ -1,6 +1,4 @@
 
-extern crate wallabag_api;
-
 use wallabag_api::add_one;
 
 fn main() {
