@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+  "wallabag-gtk",
+  "wallabag-api",
+]

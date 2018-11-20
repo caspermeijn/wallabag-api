@@ -1,0 +1,9 @@
+[package]
+name = "wallabag-gtk"
+version = "0.1.0"
+authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
+
+
+[dependencies]
+
+wallabag-api = { path = "../wallabag-api" }
