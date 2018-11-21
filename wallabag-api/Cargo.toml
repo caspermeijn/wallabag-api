@@ -5,3 +5,9 @@ authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
 edition = "2018"
 
 [dependencies]
+
+# TODO: restrict versions
+reqwest = "*"
+serde = "*"
+serde_derive = "*"
+serde_json = "*"
