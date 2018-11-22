@@ -11,9 +11,11 @@ use std::time;
 // crates
 use reqwest;
 use serde_derive::Deserialize;
-use serde_json::Value;
+use serde_json::{from_value, Value};
+use serde_json;
 
 use crate::utils::{EndPoint, UrlBuilder};
+use crate::types::{Entries, Entry};
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
@@ -21,6 +23,7 @@ pub type ApiResult<T> = Result<T, ApiError>;
 pub enum ApiError {
     ReqwestError(reqwest::Error),
     TokenExpired,
+    SerdeJsonError(serde_json::error::Error),
 }
 
 // so we can use ? with reqwest in methods and still return ApiError
@@ -29,6 +32,13 @@ impl From<reqwest::Error> for ApiError {
         ApiError::ReqwestError(err)
     }
 }
+
+impl From<serde_json::error::Error> for ApiError {
+    fn from(err: serde_json::error::Error) -> ApiError {
+        ApiError::SerdeJsonError(err)
+    }
+}
+
 
 pub struct API {
     auth_info: AuthInfo,
@@ -112,9 +122,9 @@ impl API {
         Ok(())
     }
 
-    /// Add the authorization headers and attempt to send. Will retry if token
-    /// expired and able to refresh the token.
-    /// TODO: at the moment this only works with json responses
+    /// Smartly run a request that expects to receive json back. Handles
+    /// pagination (TODO), adding authorization headers, and retry on expired
+    /// token.
     fn json_q(
         &mut self,
         verb: Verb,
@@ -122,7 +132,7 @@ impl API {
         query: &Option<String>,
         json: &Option<String>,
     ) -> ApiResult<Value> {
-        let parsed_response: Value = self.json_q_(verb, end_point, query, json)?;
+        let mut parsed_response: Value = self.simple_json_q(verb, end_point, query, json)?;
 
         match parsed_response {
             Value::Object(ref map) => {
@@ -132,24 +142,30 @@ impl API {
                 {
                     self.refresh_token()?;
                     // try again
-                    let parsed_response: Value = self.json_q_(verb, end_point, query, json)?;
-                    return Ok(parsed_response);
+                    parsed_response = self.simple_json_q(verb, end_point, query, json)?;
                 }
             }
             _ => (),
         }
 
+        // match parsed_response {
+        //     Value::Object(ref map) => {
+        //         if map.get("_links"
+
+        // TODO: handle pagination
+
         Ok(parsed_response)
     }
 
-    fn json_q_(
+    /// Just build and send a single request.
+    fn simple_json_q(
         &mut self,
         verb: Verb,
         end_point: EndPoint,
         query: &Option<String>,
         json: &Option<String>,
     ) -> ApiResult<Value> {
-        let url = self.build_url(end_point);
+        let url = self.url.build(end_point);
 
         let mut request = match verb {
             Verb::Get => self.client.get(url.as_str()),
@@ -167,17 +183,16 @@ impl API {
         Ok(response.json()?)
     }
 
-    fn build_url(&self, end_point: EndPoint) -> String {
-        self.url.build(end_point)
-    }
-
     pub fn get_entry(&mut self, id: u32) -> ApiResult<Entry> {
         let json: Value = self.json_q(Verb::Get, EndPoint::Entry(id), &None, &None)?;
 
-        println!("{:?}", json);
+        println!("{:#?}", json);
 
-        // TODO
-        Err(ApiError::TokenExpired)
+        let entry = from_value(json)?;
+
+        println!("{:#?}", entry);
+
+        Ok(entry)
     }
 
     pub fn get_entries(&mut self) -> ApiResult<Entries> {
@@ -195,13 +210,6 @@ enum Verb {
     Patch,
     Put,
     Delete,
-}
-
-pub type Entries = Vec<Entry>;
-
-#[derive(Deserialize, Debug)]
-pub struct Entry {
-    todo: String,
 }
 
 #[derive(Deserialize, Debug)]
