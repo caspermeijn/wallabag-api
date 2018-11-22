@@ -5,79 +5,79 @@ pub type Entries = Vec<Entry>;
 
 #[derive(Deserialize, Debug)]
 pub struct Entry {
-    annotations: Annotations,
-    content: Option<String>,
-    created_at: String,
-    domain_name: Option<String>,
-    headers: Option<String>, // TODO: probably not string
-    http_status: Option<String>,
-    id: u32,
-    is_archived: u32,
-    is_public: bool,
-    is_starred: u32,
-    language: Option<String>, // TODO: probably not string
-    mimetype: Option<String>,
-    origin_url: Option<String>,
-    preview_picture: Option<String>,
-    published_at: Option<String>,
-    published_by: Option<String>,
-    reading_time: u32,
-    starred_at: Option<String>,
-    tags: Vec<Tag>,
-    title: Option<String>,
-    uid: Option<String>,
-    updated_at: String,
-    url: Option<String>,
-    user_email: String,
-    user_id: u32,
-    user_name: String,
+    pub annotations: Annotations,
+    pub content: Option<String>,
+    pub created_at: String,
+    pub domain_name: Option<String>,
+    pub headers: Option<String>, // TODO: probably not string
+    pub http_status: Option<String>,
+    pub id: u32,
+    pub is_archived: u32,
+    pub is_public: bool,
+    pub is_starred: u32,
+    pub language: Option<String>, // TODO: probably not string
+    pub mimetype: Option<String>,
+    pub origin_url: Option<String>,
+    pub preview_picture: Option<String>,
+    pub published_at: Option<String>,
+    pub published_by: Option<String>,
+    pub reading_time: u32,
+    pub starred_at: Option<String>,
+    pub tags: Vec<Tag>,
+    pub title: Option<String>,
+    pub uid: Option<String>,
+    pub updated_at: String,
+    pub url: Option<String>,
+    pub user_email: String,
+    pub user_id: u32,
+    pub user_name: String,
 }
 
 pub type Annotations = Vec<Annotation>;
 
 #[derive(Deserialize, Debug)]
 pub struct Annotation {
-    annotator_schema_version: String,
-    created_at: String,
-    id: u32,
-    quote: String,
-    ranges: Vec<Range>,
-    text: String,
-    updated_at: String,
-    user: Option<String>,
+    pub annotator_schema_version: String,
+    pub created_at: String,
+    pub id: u32,
+    pub quote: String,
+    pub ranges: Vec<Range>,
+    pub text: String,
+    pub updated_at: String,
+    pub user: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Range {
-    end: String,
-    endOffset: String,
-    start: String,
-    startOffset: String,
+    pub end: String,
+    pub endOffset: String,
+    pub start: String,
+    pub startOffset: String,
 }
 
 
 #[derive(Deserialize, Debug)]
 pub struct Tag {
-    id: u32,
-    label: String,
-    slug: String,
+    pub id: u32,
+    pub label: String,
+    pub slug: String,
 }
 
 
 
 #[derive(Deserialize, Debug)]
 pub struct PaginatedEntries {
-    limit: u32,
-    page: u32,
-    pages: u32,
-    total: u32,
+    pub limit: u32,
+    pub page: u32,
+    pub pages: u32,
+    pub total: u32,
     // TODO: _links ?
-    _embedded: EmbeddedEntries,
+    pub _embedded: EmbeddedEntries,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct EmbeddedEntries {
-    items: Entries,
+    pub items: Entries,
 }
 
 

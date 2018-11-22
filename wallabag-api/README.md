@@ -15,7 +15,7 @@ Provides types and functions for interacting with a Wallabag server.
       Retrieve annotations for an entry.
 - [ ] POST `/api/annotations/{entry}.{_format}`
       Creates a new annotation.
-- [ ] GET `/api/entries.{_format}`
+- [-] GET `/api/entries.{_format}`
       Retrieve all entries. It could be filtered by many options.
 - [ ] POST `/api/entries.{_format}`
       Create an entry.

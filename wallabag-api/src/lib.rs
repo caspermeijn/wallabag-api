@@ -9,7 +9,8 @@ use std::thread;
 use std::time;
 
 // crates
-use reqwest;
+use reqwest::{self, StatusCode};
+use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 use serde_derive::Deserialize;
 use serde_json;
@@ -23,8 +24,9 @@ pub type ApiResult<T> = Result<T, ApiError>;
 #[derive(Debug)]
 pub enum ApiError {
     ReqwestError(reqwest::Error),
-    TokenExpired,
     SerdeJsonError(serde_json::error::Error),
+
+    OtherError,
 }
 
 // so we can use ? with reqwest in methods and still return ApiError
@@ -124,75 +126,34 @@ impl API {
 
     /// Smartly run a request that expects to receive json back. Handles adding
     /// authorization headers, and retry on expired token.
-    fn json_q(
+    /// TODO: more abstract types for query and json
+    fn json_q<T>(
         &mut self,
         verb: Verb,
         end_point: EndPoint,
-        query: &HashMap<&str, &str>,
-        json: Option<&String>,
-    ) -> ApiResult<Value> {
-        let mut parsed_response: Value = self.simple_json_q(verb, end_point, &query, json)?;
+        query: &HashMap<String, String>,
+        json: &HashMap<String, String>,
+    ) -> ApiResult<T>
+    where
+        T: DeserializeOwned,
+    {
+        let mut response = self.simple_json_q(verb, end_point, &query, json)?;
 
-        // check for error
-        match parsed_response {
-            Value::Object(ref map) => {
-                if map.get("error") == Some(&Value::String("invalid_grant".to_owned()))
-                    && map.get("error_description")
-                        == Some(&Value::String("The access token expired".to_owned()))
-                {
+        match response.status() {
+            StatusCode::UNAUTHORIZED => {
+                let err: ResponseError = response.json()?;
+                if err.error_description.as_str().contains("expired") {
+                    // let's just try refreshing the token
                     self.refresh_token()?;
-                    // try again
-                    parsed_response = self.simple_json_q(verb, end_point, &query, json)?;
+
+                    // try the request again now
+                    response = self.simple_json_q(verb, end_point, &query, json)?;
                 }
             }
             _ => (),
         }
 
-        Ok(parsed_response)
-    }
-
-    fn should_get_next_page(&self, parsed_response: &Value) -> Option<u32> {
-        // if let Some(page) = self.should_get_next_page(&parsed_response) {
-        //     let mut query = query.clone();
-        //     let page = page.to_string();
-        //     query.insert("page", &page);
-
-        //     loop {
-        //         let next_page_response = self.simple_json_q(verb, end_point, &query, json)?;
-
-        //         // TODO: add to thing
-
-        //         if let Some(page) = self.should_get_next_page(&next_page_response) {
-        //             // TODO
-        //         } else {
-        //             break;
-        //         }
-        //     }
-        // }
-
-        println!("{:#?}", parsed_response);
-        match parsed_response {
-            Value::Object(ref map) => {
-                if let Some(Value::Number(page)) = map.get("page") {
-                    if let Some(Value::Number(pages)) = map.get("pages") {
-                        let page = page.as_u64().unwrap();
-                        let pages = pages.as_u64().unwrap();
-                        println!("{:?}", page);
-                        println!("{:?}", pages);
-                        if page < pages {
-                            Some((page + 1) as u32)
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
+        Ok(response.error_for_status()?.json()?)
     }
 
     /// Just build and send a single request.
@@ -200,52 +161,68 @@ impl API {
         &mut self,
         verb: Verb,
         end_point: EndPoint,
-        query: &HashMap<&str, &str>,
-        json: Option<&String>,
-    ) -> ApiResult<Value> {
+        query: &HashMap<String, String>,
+        json: &HashMap<String, String>,
+    ) -> ApiResult<reqwest::Response> {
         let url = self.url.build(end_point);
 
-        let mut request = match verb {
+        let request = match verb {
             Verb::Get => self.client.get(url.as_str()),
             _ => self.client.post(url.as_str()),
-            // TODO: handle all
+            // TODO: handle all verbs
         };
 
-        let mut request = request.query(&query);
-        // TODO: query params and json body
-
-        let mut response = request
+        let response = request
+            .query(&query)
+            .json(&json)
             .header(
                 reqwest::header::AUTHORIZATION,
                 format!("Bearer {}", self.get_token()?),
             )
             .send()?;
 
-        Ok(response.json()?)
+        Ok(response)
     }
 
     pub fn get_entry(&mut self, id: u32) -> ApiResult<Entry> {
-        let json: Value = self.json_q(Verb::Get, EndPoint::Entry(id), &HashMap::new(), None)?;
+        let json: Value = self.json_q(
+            Verb::Get,
+            EndPoint::Entry(id),
+            &HashMap::new(),
+            &HashMap::new(),
+        )?;
 
         let entry = from_value(json)?;
 
         Ok(entry)
     }
 
+    /// Get all entries. TODO: filters
     pub fn get_entries(&mut self) -> ApiResult<Entries> {
         let mut params = HashMap::new();
-        params.insert("perPage", "1");
 
-        let json: Value = self.json_q(Verb::Get, EndPoint::Entries, &params, None)?;
+        let mut entries = Entries::new();
 
+        // loop to handle pagination. No other api endpoints paginate so it's
+        // fine here.
+        loop {
+            let json: PaginatedEntries =
+                self.json_q(Verb::Get, EndPoint::Entries, &params, &HashMap::new())?;
+            println!("{}", json.page);
 
-        println!("{:#?}", json);
-        let thing: PaginatedEntries = from_value(json)?;
+            entries.extend(json._embedded.items.into_iter());
 
-        println!("{:#?}", thing);
-        // let entries = from_value(json)?;
+            if json.page >= json.pages {
+                break;
+            } else {
+                // otherwise next page
+                params.insert("page".to_owned(), (json.page + 1).to_string());
+            }
+        }
 
-        Ok(vec![])
+        println!("{:#?}", entries);
+
+        Ok(entries)
     }
 }
 
@@ -279,6 +256,13 @@ pub struct AuthInfo {
 pub struct Config {
     pub auth_info: AuthInfo,
     pub base_url: String,
+}
+
+/// Type for the json error data returned on error from the http api
+#[derive(Deserialize, Debug)]
+pub struct ResponseError {
+    pub error: String,
+    pub error_description: String,
 }
 
 #[cfg(test)]
