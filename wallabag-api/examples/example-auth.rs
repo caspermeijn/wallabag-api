@@ -19,7 +19,7 @@ pub fn main() {
 
     let mut api = API::new(config);
 
-    let res = api.get_entries();
+    let res = api.get_entry(1798248);
 
-    // println!("{:?}", res);
+    println!("{:?}", res);
 }

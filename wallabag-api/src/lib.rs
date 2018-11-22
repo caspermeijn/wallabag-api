@@ -3,10 +3,10 @@ mod utils;
 
 // std libs
 use std::collections::HashMap;
+use std::result::Result;
 use std::sync::Mutex;
 use std::thread;
 use std::time;
-use std::result::Result;
 
 // crates
 use reqwest;
@@ -17,6 +17,7 @@ use crate::utils::{EndPoint, UrlBuilder};
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
+#[derive(Debug)]
 pub enum ApiError {
     ReqwestError(reqwest::Error),
     TokenExpired,
@@ -29,11 +30,11 @@ impl From<reqwest::Error> for ApiError {
     }
 }
 
-
 pub struct API {
     auth_info: AuthInfo,
     token_info: Option<TokenInfo>,
     url: UrlBuilder,
+    client: reqwest::Client,
 }
 
 impl API {
@@ -42,6 +43,7 @@ impl API {
             auth_info: config.auth_info,
             token_info: None,
             url: UrlBuilder::new(config.base_url),
+            client: reqwest::Client::new(),
         }
     }
 
@@ -111,17 +113,16 @@ impl API {
     }
 
     /// Add the authorization headers and attempt to send. Will retry if token
-    /// expired and able to refresh the token
-    fn build_and_send(&mut self, req: reqwest::RequestBuilder) -> ApiResult<Value> {
-        // initial request
-        let mut res = req
-            .header(
-                reqwest::header::AUTHORIZATION,
-                format!("Bearer {}", self.get_token()?),
-            )
-            .send()?;
-
-        let parsed_response: Value = res.json()?;
+    /// expired and able to refresh the token.
+    /// TODO: at the moment this only works with json responses
+    fn json_q(
+        &mut self,
+        verb: Verb,
+        end_point: EndPoint,
+        query: &Option<String>,
+        json: &Option<String>,
+    ) -> ApiResult<Value> {
+        let parsed_response: Value = self.json_q_(verb, end_point, query, json)?;
 
         match parsed_response {
             Value::Object(ref map) => {
@@ -130,7 +131,9 @@ impl API {
                         == Some(&Value::String("The access token expired".to_owned()))
                 {
                     self.refresh_token()?;
-                    return Err(ApiError::TokenExpired);
+                    // try again
+                    let parsed_response: Value = self.json_q_(verb, end_point, query, json)?;
+                    return Ok(parsed_response);
                 }
             }
             _ => (),
@@ -139,21 +142,59 @@ impl API {
         Ok(parsed_response)
     }
 
+    fn json_q_(
+        &mut self,
+        verb: Verb,
+        end_point: EndPoint,
+        query: &Option<String>,
+        json: &Option<String>,
+    ) -> ApiResult<Value> {
+        let url = self.build_url(end_point);
+
+        let mut request = match verb {
+            Verb::Get => self.client.get(url.as_str()),
+            _ => self.client.post(url.as_str()),
+            // TODO: handle all
+        };
+
+        // TODO: query params and json body
+
+        let mut response = request.header(
+            reqwest::header::AUTHORIZATION,
+            format!("Bearer {}", self.get_token()?),
+        ).send()?;
+
+        Ok(response.json()?)
+    }
+
+    fn build_url(&self, end_point: EndPoint) -> String {
+        self.url.build(end_point)
+    }
+
+    pub fn get_entry(&mut self, id: u32) -> ApiResult<Entry> {
+        let json: Value = self.json_q(Verb::Get, EndPoint::Entry(id), &None, &None)?;
+
+        println!("{:?}", json);
+
+        // TODO
+        Err(ApiError::TokenExpired)
+    }
+
     pub fn get_entries(&mut self) -> ApiResult<Entries> {
-        let base_url = "https://framabag.org";
-        let path = "/api/entries";
-        let url = format!("{}{}", base_url, path);
-
-        let token = self.get_token()?;
-
-        let client = reqwest::Client::new();
-        let mut res = self.build_and_send(client.get(&url))?;
-
-        println!("{:?}", res);
+        let url = self.url.build(EndPoint::Entries);
 
         // TODO
         Ok(vec![])
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Verb {
+    Get,
+    Post,
+    Patch,
+    Put,
+    Delete,
 }
 
 pub type Entries = Vec<Entry>;

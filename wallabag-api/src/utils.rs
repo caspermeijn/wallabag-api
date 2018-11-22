@@ -1,16 +1,23 @@
 use std::fmt;
 
+
+#[derive(Debug, Clone, Copy)]
 pub enum EndPoint {
     Token,
+    Entries,
+    Entry(u32),
 }
 
 impl fmt::Display for EndPoint {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use super::EndPoint::*;
         write!(
             f,
             "{}",
             match self {
-                Token => "/oauth/v2/token",
+                Token => "/oauth/v2/token".to_owned(),
+                Entries => "/api/entries.json".to_owned(),
+                Entry(i) => format!("/api/entries/{}.json", i),
             }
         )
     }
