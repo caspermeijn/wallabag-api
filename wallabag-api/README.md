@@ -31,7 +31,7 @@ Provides types and functions for interacting with a Wallabag server.
       Handles an entries list and add tags to them.
 - [ ] DELETE `/api/entries/{entry}.{_format}`
       Delete permanently an entry.
-- [ ] GET `/api/entries/{entry}.{_format}`
+- [X] GET `/api/entries/{entry}.{_format}`
       Retrieve a single entry.
 - [ ] PATCH `/api/entries/{entry}.{_format}`
       Change several properties of an entry.

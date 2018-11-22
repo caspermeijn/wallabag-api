@@ -10,12 +10,13 @@ use std::time;
 
 // crates
 use reqwest;
+use serde::ser::Serialize;
 use serde_derive::Deserialize;
-use serde_json::{from_value, Value};
 use serde_json;
+use serde_json::{from_value, Value};
 
+use crate::types::{Entries, Entry, PaginatedEntries};
 use crate::utils::{EndPoint, UrlBuilder};
-use crate::types::{Entries, Entry};
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
@@ -38,7 +39,6 @@ impl From<serde_json::error::Error> for ApiError {
         ApiError::SerdeJsonError(err)
     }
 }
-
 
 pub struct API {
     auth_info: AuthInfo,
@@ -122,18 +122,18 @@ impl API {
         Ok(())
     }
 
-    /// Smartly run a request that expects to receive json back. Handles
-    /// pagination (TODO), adding authorization headers, and retry on expired
-    /// token.
+    /// Smartly run a request that expects to receive json back. Handles adding
+    /// authorization headers, and retry on expired token.
     fn json_q(
         &mut self,
         verb: Verb,
         end_point: EndPoint,
-        query: &Option<String>,
-        json: &Option<String>,
+        query: &HashMap<&str, &str>,
+        json: Option<&String>,
     ) -> ApiResult<Value> {
-        let mut parsed_response: Value = self.simple_json_q(verb, end_point, query, json)?;
+        let mut parsed_response: Value = self.simple_json_q(verb, end_point, &query, json)?;
 
+        // check for error
         match parsed_response {
             Value::Object(ref map) => {
                 if map.get("error") == Some(&Value::String("invalid_grant".to_owned()))
@@ -142,19 +142,57 @@ impl API {
                 {
                     self.refresh_token()?;
                     // try again
-                    parsed_response = self.simple_json_q(verb, end_point, query, json)?;
+                    parsed_response = self.simple_json_q(verb, end_point, &query, json)?;
                 }
             }
             _ => (),
         }
 
-        // match parsed_response {
-        //     Value::Object(ref map) => {
-        //         if map.get("_links"
-
-        // TODO: handle pagination
-
         Ok(parsed_response)
+    }
+
+    fn should_get_next_page(&self, parsed_response: &Value) -> Option<u32> {
+        // if let Some(page) = self.should_get_next_page(&parsed_response) {
+        //     let mut query = query.clone();
+        //     let page = page.to_string();
+        //     query.insert("page", &page);
+
+        //     loop {
+        //         let next_page_response = self.simple_json_q(verb, end_point, &query, json)?;
+
+        //         // TODO: add to thing
+
+        //         if let Some(page) = self.should_get_next_page(&next_page_response) {
+        //             // TODO
+        //         } else {
+        //             break;
+        //         }
+        //     }
+        // }
+
+        println!("{:#?}", parsed_response);
+        match parsed_response {
+            Value::Object(ref map) => {
+                if let Some(Value::Number(page)) = map.get("page") {
+                    if let Some(Value::Number(pages)) = map.get("pages") {
+                        let page = page.as_u64().unwrap();
+                        let pages = pages.as_u64().unwrap();
+                        println!("{:?}", page);
+                        println!("{:?}", pages);
+                        if page < pages {
+                            Some((page + 1) as u32)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
     }
 
     /// Just build and send a single request.
@@ -162,8 +200,8 @@ impl API {
         &mut self,
         verb: Verb,
         end_point: EndPoint,
-        query: &Option<String>,
-        json: &Option<String>,
+        query: &HashMap<&str, &str>,
+        json: Option<&String>,
     ) -> ApiResult<Value> {
         let url = self.url.build(end_point);
 
@@ -173,32 +211,40 @@ impl API {
             // TODO: handle all
         };
 
+        let mut request = request.query(&query);
         // TODO: query params and json body
 
-        let mut response = request.header(
-            reqwest::header::AUTHORIZATION,
-            format!("Bearer {}", self.get_token()?),
-        ).send()?;
+        let mut response = request
+            .header(
+                reqwest::header::AUTHORIZATION,
+                format!("Bearer {}", self.get_token()?),
+            )
+            .send()?;
 
         Ok(response.json()?)
     }
 
     pub fn get_entry(&mut self, id: u32) -> ApiResult<Entry> {
-        let json: Value = self.json_q(Verb::Get, EndPoint::Entry(id), &None, &None)?;
-
-        println!("{:#?}", json);
+        let json: Value = self.json_q(Verb::Get, EndPoint::Entry(id), &HashMap::new(), None)?;
 
         let entry = from_value(json)?;
-
-        println!("{:#?}", entry);
 
         Ok(entry)
     }
 
     pub fn get_entries(&mut self) -> ApiResult<Entries> {
-        let url = self.url.build(EndPoint::Entries);
+        let mut params = HashMap::new();
+        params.insert("perPage", "1");
 
-        // TODO
+        let json: Value = self.json_q(Verb::Get, EndPoint::Entries, &params, None)?;
+
+
+        println!("{:#?}", json);
+        let thing: PaginatedEntries = from_value(json)?;
+
+        println!("{:#?}", thing);
+        // let entries = from_value(json)?;
+
         Ok(vec![])
     }
 }
