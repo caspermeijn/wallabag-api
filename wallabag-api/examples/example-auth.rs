@@ -21,7 +21,12 @@ pub fn main() {
 
     // let res = api.get_entry(1798248);
     // let res = client.get_entries();
-    let res = client.get_annotations(1798248);
+    // let res = client.delete_annotation(2);
+    // println!("{:#?}", res);
 
+    // let res = client.delete_annotation(904);
+    // println!("{:#?}", res);
+
+    let res = client.get_annotations(1798248);
     println!("{:#?}", res);
 }

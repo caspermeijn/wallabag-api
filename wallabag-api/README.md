@@ -7,7 +7,7 @@ Provides types and functions for interacting with a Wallabag server.
 ## supported endpoints:
 
 
-- [ ] DELETE `/api/annotations/{annotation}.{_format}`
+- [X] DELETE `/api/annotations/{annotation}.{_format}`
       Removes an annotation.
 - [ ] PUT `/api/annotations/{annotation}.{_format}`
       Updates an annotation.

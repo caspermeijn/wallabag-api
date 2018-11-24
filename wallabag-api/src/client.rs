@@ -2,13 +2,15 @@
 use std::collections::HashMap;
 
 // extern crates
-use reqwest::{self, Method, Response, StatusCode};
+use reqwest::{self, Method, StatusCode};
 use serde::de::DeserializeOwned;
 use serde_json::{from_value, Value};
 
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseError};
-use crate::types::{Annotations, AuthInfo, Config, Entries, Entry, PaginatedEntries, TokenInfo};
+use crate::types::{
+    Annotation, Annotations, AuthInfo, Config, Entries, Entry, PaginatedEntries, TokenInfo,
+};
 use crate::utils::{EndPoint, UrlBuilder};
 
 /// The main thing that provides all the methods for interacting with the
@@ -49,7 +51,6 @@ impl Client {
 
     /// Use credentials in the config to obtain an access token.
     fn load_token(&mut self) -> ClientResult<()> {
-
         let mut fields = HashMap::new();
         fields.insert("grant_type".to_owned(), "password".to_owned());
         fields.insert("client_id".to_owned(), self.auth_info.client_id.clone());
@@ -187,6 +188,18 @@ impl Client {
         let entry = from_value(json)?;
 
         Ok(entry)
+    }
+
+    /// Delete an annotation by id
+    pub fn delete_annotation(&mut self, id: u32) -> ClientResult<Annotation> {
+        let json: Annotation = self.smart_json_q(
+            Method::DELETE,
+            EndPoint::Annotations(id),
+            &HashMap::new(),
+            &HashMap::new(),
+        )?;
+
+        Ok(json)
     }
 
     /// Get all annotations for an entry (by id).
