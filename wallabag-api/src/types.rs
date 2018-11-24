@@ -1,10 +1,5 @@
 use serde_derive::Deserialize;
 
-#[derive(Debug, Clone, Copy)]
-pub enum Verb {
-    Get,
-}
-
 #[derive(Deserialize, Debug)]
 pub struct TokenInfo {
     pub access_token: String,
@@ -26,13 +21,6 @@ pub struct AuthInfo {
 pub struct Config {
     pub auth_info: AuthInfo,
     pub base_url: String,
-}
-
-/// Type for the json error data returned on error from the http api
-#[derive(Deserialize, Debug)]
-pub struct ResponseError {
-    pub error: String,
-    pub error_description: String,
 }
 
 pub type Entries = Vec<Entry>;

@@ -2,15 +2,13 @@
 use std::collections::HashMap;
 
 // extern crates
-use reqwest::{self, Response, StatusCode};
+use reqwest::{self, Method, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde_json::{from_value, Value};
 
 // local imports
-use crate::errors::{ClientResult, ClientError};
-use crate::types::{
-    AuthInfo, Config, Entries, Entry, PaginatedEntries, ResponseError, TokenInfo, Verb, Annotations
-};
+use crate::errors::{ClientError, ClientResult, ResponseError};
+use crate::types::{Annotations, AuthInfo, Config, Entries, Entry, PaginatedEntries, TokenInfo};
 use crate::utils::{EndPoint, UrlBuilder};
 
 /// The main thing that provides all the methods for interacting with the
@@ -51,23 +49,24 @@ impl Client {
 
     /// Use credentials in the config to obtain an access token.
     fn load_token(&mut self) -> ClientResult<()> {
-        let url = self.url.build(EndPoint::Token);
 
         let mut fields = HashMap::new();
+        fields.insert("grant_type".to_owned(), "password".to_owned());
+        fields.insert("client_id".to_owned(), self.auth_info.client_id.clone());
+        fields.insert(
+            "client_secret".to_owned(),
+            self.auth_info.client_secret.clone(),
+        );
+        fields.insert("username".to_owned(), self.auth_info.username.clone());
+        fields.insert("password".to_owned(), self.auth_info.password.clone());
 
-        fields.insert("grant_type", "password");
-        fields.insert("client_id", &self.auth_info.client_id);
-        fields.insert("client_secret", &self.auth_info.client_secret);
-        fields.insert("username", &self.auth_info.username);
-        fields.insert("password", &self.auth_info.password);
-
-        let client = reqwest::Client::new();
-        let mut res = client.post(&url).json(&fields).send()?;
-
-        // println!("{:#?}", res.text()?);
-        res = res.error_for_status()?;
-
-        let token_info: TokenInfo = res.json()?;
+        let token_info: TokenInfo = self.json_q(
+            Method::POST,
+            EndPoint::Token,
+            &HashMap::new(),
+            &fields,
+            false,
+        )?;
         self.token_info = Some(token_info);
 
         Ok(())
@@ -79,23 +78,25 @@ impl Client {
             return self.load_token();
         }
 
-        let url = self.url.build(EndPoint::Token);
-
         let mut fields = HashMap::new();
-
-        fields.insert("grant_type", "refresh_token");
-        fields.insert("client_id", &self.auth_info.client_id);
-        fields.insert("client_secret", &self.auth_info.client_secret);
+        fields.insert("grant_type".to_owned(), "refresh_token".to_owned());
+        fields.insert("client_id".to_owned(), self.auth_info.client_id.clone());
         fields.insert(
-            "refresh_token",
-            self.token_info.as_ref().unwrap().refresh_token.as_ref(),
+            "client_secret".to_owned(),
+            self.auth_info.client_secret.clone(),
+        );
+        fields.insert(
+            "refresh_token".to_owned(),
+            self.token_info.as_ref().unwrap().refresh_token.clone(),
         );
 
-        let client = reqwest::Client::new();
-        let mut res = client.post(&url).json(&fields).send()?;
-        res = res.error_for_status()?;
-
-        let token_info: TokenInfo = res.json()?;
+        let token_info: TokenInfo = self.json_q(
+            Method::POST,
+            EndPoint::Token,
+            &HashMap::new(),
+            &fields,
+            false,
+        )?;
         self.token_info = Some(token_info);
 
         Ok(())
@@ -104,9 +105,9 @@ impl Client {
     /// Smartly run a request that expects to receive json back. Handles adding
     /// authorization headers, and retry on expired token.
     /// TODO: more abstract types for query and json
-    fn json_q<T>(
+    fn smart_json_q<T>(
         &mut self,
-        verb: Verb,
+        method: Method,
         end_point: EndPoint,
         query: &HashMap<String, String>,
         json: &HashMap<String, String>,
@@ -114,17 +115,58 @@ impl Client {
     where
         T: DeserializeOwned,
     {
-        let mut response = self.simple_json_q(verb, end_point, &query, json)?;
+        let response_result = self.json_q(method.clone(), end_point, &query, json, true);
 
-        match response.status() {
-            StatusCode::UNAUTHORIZED => {
-                let err: ResponseError = response.json()?;
+        match response_result {
+            Err(ClientError::Unauthorized(ref err)) => {
                 if err.error_description.as_str().contains("expired") {
                     // let's just try refreshing the token
                     self.refresh_token()?;
 
                     // try the request again now
-                    response = self.simple_json_q(verb, end_point, &query, json)?;
+                    return Ok(self.json_q(method, end_point, &query, json, true)?);
+                }
+            }
+            _ => (),
+        }
+
+        Ok(response_result?)
+    }
+
+    /// Just build and send a single request.
+    fn json_q<T>(
+        &mut self,
+        method: Method,
+        end_point: EndPoint,
+        query: &HashMap<String, String>,
+        json: &HashMap<String, String>,
+        use_token: bool,
+    ) -> ClientResult<T>
+    where
+        T: DeserializeOwned,
+    {
+        let url = self.url.build(end_point);
+
+        let mut request = self.client.request(method, &url).query(&query).json(&json);
+
+        if use_token {
+            request = request.header(
+                reqwest::header::AUTHORIZATION,
+                format!("Bearer {}", self.get_token()?),
+            );
+        }
+
+        let mut response = request.send()?;
+
+        // main error handling here
+        // TODO: handle more cases
+        match response.status() {
+            StatusCode::UNAUTHORIZED => {
+                let info: ResponseError = response.json()?;
+                if info.error_description.as_str().contains("expired") {
+                    return Err(ClientError::ExpiredToken);
+                } else {
+                    return Err(ClientError::Unauthorized(info));
                 }
             }
             _ => (),
@@ -133,38 +175,10 @@ impl Client {
         Ok(response.error_for_status()?.json()?)
     }
 
-    /// Just build and send a single request.
-    fn simple_json_q(
-        &mut self,
-        verb: Verb,
-        end_point: EndPoint,
-        query: &HashMap<String, String>,
-        json: &HashMap<String, String>,
-    ) -> ClientResult<Response> {
-        let url = self.url.build(end_point);
-
-        let request = match verb {
-            Verb::Get => self.client.get(url.as_str()),
-            // _ => self.client.post(url.as_str()),
-            // TODO: handle all verbs
-        };
-
-        let response = request
-            .query(&query)
-            .json(&json)
-            .header(
-                reqwest::header::AUTHORIZATION,
-                format!("Bearer {}", self.get_token()?),
-            )
-            .send()?;
-
-        Ok(response)
-    }
-
     /// Get an entry by id.
     pub fn get_entry(&mut self, id: u32) -> ClientResult<Entry> {
-        let json: Value = self.json_q(
-            Verb::Get,
+        let json: Value = self.smart_json_q(
+            Method::GET,
             EndPoint::Entry(id),
             &HashMap::new(),
             &HashMap::new(),
@@ -177,8 +191,8 @@ impl Client {
 
     /// Get all annotations for an entry (by id).
     pub fn get_annotations(&mut self, id: u32) -> ClientResult<Annotations> {
-        let json: Value = self.json_q(
-            Verb::Get,
+        let json: Value = self.smart_json_q(
+            Method::GET,
             EndPoint::Annotations(id),
             &HashMap::new(),
             &HashMap::new(),
@@ -193,8 +207,7 @@ impl Client {
             }
             _ => (),
         }
-
-        Err(ClientError::OtherError)
+        Err(ClientError::UnexpectedJsonStructure)
     }
 
     /// Get all entries. TODO: filters
@@ -207,7 +220,7 @@ impl Client {
         // fine here.
         loop {
             let json: PaginatedEntries =
-                self.json_q(Verb::Get, EndPoint::Entries, &params, &HashMap::new())?;
+                self.smart_json_q(Method::GET, EndPoint::Entries, &params, &HashMap::new())?;
             println!("{}", json.page);
 
             entries.extend(json._embedded.items.into_iter());

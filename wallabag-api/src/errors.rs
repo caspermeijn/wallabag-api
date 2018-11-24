@@ -1,11 +1,21 @@
+use serde_derive::Deserialize;
+
 pub type ClientResult<T> = std::result::Result<T, ClientError>;
+
+/// Type for the json error data returned on error from the http api
+#[derive(Deserialize, Debug)]
+pub struct ResponseError {
+    pub error: String,
+    pub error_description: String,
+}
 
 #[derive(Debug)]
 pub enum ClientError {
     ReqwestError(reqwest::Error),
     SerdeJsonError(serde_json::error::Error),
-
-    OtherError,
+    Unauthorized(ResponseError),
+    ExpiredToken,
+    UnexpectedJsonStructure, // eg returned valid json but didn't fit model
 }
 
 // TODO: extract reqwest errors and turn them into more useful ClientErrors
