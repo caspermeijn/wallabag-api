@@ -175,6 +175,28 @@ impl Client {
         Ok(response.error_for_status()?.json()?)
     }
 
+    /// Check if a list of urls already have entries. This is more efficient if
+    /// you want to batch check urls since only a single request is required.
+    pub fn check_exists_vec(
+        &mut self,
+        urls: Vec<String>,
+    ) -> ClientResult<HashMap<String, Option<u32>>> {
+        let mut params = vec![];
+        params.push(("return_id".to_owned(), "1".to_owned()));
+
+        // workaround: need to structure the params as a list of pairs since Vec
+        // values are unsupported:
+        // https://github.com/nox/serde_urlencoded/issues/46
+        for url in urls.into_iter() {
+            params.push(("urls[]".to_owned(), url));
+        }
+
+        let exists_info: HashMap<String, Option<u32>> =
+            self.smart_json_q(Method::GET, EndPoint::Exists, &params, UNIT)?;
+
+        Ok(exists_info)
+    }
+
     /// check if a url already has an entry recorded.
     pub fn check_exists(&mut self, url: &str) -> ClientResult<Option<u32>> {
         let mut params = HashMap::new();
