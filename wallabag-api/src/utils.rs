@@ -1,6 +1,5 @@
 use std::fmt;
 
-
 #[derive(Debug, Clone, Copy)]
 pub enum EndPoint {
     Token,
@@ -10,7 +9,7 @@ pub enum EndPoint {
 
 impl fmt::Display for EndPoint {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use super::EndPoint::*;
+        use self::EndPoint::*;
         write!(
             f,
             "{}",
@@ -36,7 +35,6 @@ impl UrlBuilder {
         format!("{}{}", self.base_url, end_point)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

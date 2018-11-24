@@ -1,7 +1,7 @@
 use std::env;
-use std::thread;
 
-use wallabag_api::{AuthInfo, Config, API};
+use wallabag_api::types::{AuthInfo, Config};
+use wallabag_api::Client;
 
 pub fn main() {
     let config = Config {
@@ -17,10 +17,10 @@ pub fn main() {
 
     println!("{:?}", config);
 
-    let mut api = API::new(config);
+    let mut client = Client::new(config);
 
     // let res = api.get_entry(1798248);
-    let res = api.get_entries();
+    let res = client.get_entries();
 
     println!("{:#?}", res);
 }

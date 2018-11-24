@@ -1,8 +1,44 @@
 use serde_derive::Deserialize;
 
+#[derive(Debug, Clone, Copy)]
+pub enum Verb {
+    Get,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct TokenInfo {
+    pub access_token: String,
+    pub expires_in: u32,
+    pub token_type: String,
+    pub scope: Option<String>,
+    pub refresh_token: String,
+}
+
+#[derive(Debug)]
+pub struct AuthInfo {
+    pub client_id: String,
+    pub client_secret: String,
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug)]
+pub struct Config {
+    pub auth_info: AuthInfo,
+    pub base_url: String,
+}
+
+/// Type for the json error data returned on error from the http api
+#[derive(Deserialize, Debug)]
+pub struct ResponseError {
+    pub error: String,
+    pub error_description: String,
+}
 
 pub type Entries = Vec<Entry>;
 
+/// A struct representing an entry from wallabag (a full saved article including
+/// annotations and tags).
 #[derive(Deserialize, Debug)]
 pub struct Entry {
     pub annotations: Annotations,
@@ -55,15 +91,12 @@ pub struct Range {
     pub startOffset: String,
 }
 
-
 #[derive(Deserialize, Debug)]
 pub struct Tag {
     pub id: u32,
     pub label: String,
     pub slug: String,
 }
-
-
 
 #[derive(Deserialize, Debug)]
 pub struct PaginatedEntries {
@@ -79,9 +112,3 @@ pub struct PaginatedEntries {
 pub struct EmbeddedEntries {
     pub items: Entries,
 }
-
-
-
-
-
-
