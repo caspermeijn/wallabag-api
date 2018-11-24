@@ -1,8 +1,10 @@
 use serde_derive::{Deserialize, Serialize};
 
 mod new_entry;
+mod user;
 
 pub use self::new_entry::NewEntry;
+pub use self::user::{User, RegisterInfo, NewlyRegisteredInfo};
 
 #[derive(Deserialize, Debug)]
 pub struct TokenInfo {

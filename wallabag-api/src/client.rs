@@ -11,7 +11,7 @@ use serde_json::{from_value, Value};
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
     Annotation, Annotations, AuthInfo, Config, Entries, Entry, ExistsResponse, NewAnnotation,
-    NewEntry, PaginatedEntries, TokenInfo, UNIT,
+    NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, TokenInfo, User, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -170,6 +170,7 @@ impl Client {
                 return Err(ClientError::NotFound);
             }
             _ => (),
+            // TODO: try to parse json error message on error status
         }
 
         Ok(response.error_for_status()?.json()?)
@@ -314,4 +315,16 @@ impl Client {
         Ok(version)
     }
 
+    /// Get the currently logged in user information.
+    pub fn get_user(&mut self) -> ClientResult<User> {
+        let user: User = self.smart_json_q(Method::GET, EndPoint::User, UNIT, UNIT)?;
+        Ok(user)
+    }
+
+    /// Register a user and create a client.
+    pub fn register_user(&mut self, info: &RegisterInfo) -> ClientResult<NewlyRegisteredInfo> {
+        let info: NewlyRegisteredInfo =
+            self.json_q(Method::PUT, EndPoint::User, UNIT, info, false)?;
+        Ok(info)
+    }
 }

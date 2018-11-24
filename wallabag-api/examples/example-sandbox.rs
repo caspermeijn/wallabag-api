@@ -1,6 +1,6 @@
 use std::env;
 
-use wallabag_api::types::{AuthInfo, Config, NewAnnotation, Range};
+use wallabag_api::types::{AuthInfo, Config, NewAnnotation, Range, RegisterInfo};
 use wallabag_api::Client;
 
 pub fn main() {
@@ -21,6 +21,8 @@ pub fn main() {
 
     // let res = api.get_entry(1798248);
     // let res = client.get_entries();
+    // println!("{:#?}", res);
+
     // let res = client.delete_annotation(2);
     // println!("{:#?}", res);
 
@@ -38,8 +40,17 @@ pub fn main() {
     // let res = client.update_annotation(&annotation);
     // println!("{:#?}", res);
 
-    let res = client.get_api_version();
-    println!("{:#?}", res);
+    // let res = client.get_api_version();
+    // println!("{:#?}", res);
+
+    // let res = client.register_user(&RegisterInfo {
+    //     username: "placeholder".to_owned(),
+    //     password: "placeholder".to_owned(),
+    //     email: "placeholder@example.com".to_owned(),
+    //     client_name: "placeholder".to_owned(),
+    // });
+    // println!("{:#?}", res);
+
 
 
 }

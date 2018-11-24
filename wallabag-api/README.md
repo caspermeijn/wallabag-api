@@ -53,9 +53,9 @@ Provides types and functions for interacting with a Wallabag server.
       Permanently remove some tags from every entry.
 - [ ] DELETE `/api/tags/{tag}.{_format}`
       Permanently remove one tag from every entry by passing the Tag ID.
-- [ ] GET `/api/user.{_format}`
+- [X] GET `/api/user.{_format}`
       Retrieve current logged in user informations.
-- [ ] PUT `/api/user.{_format}`
+- [X] PUT `/api/user.{_format}`
       Register an user and create a client.
 - [X] GET `/api/version.{_format}`
       Retrieve version number.
