@@ -27,14 +27,19 @@ pub fn main() {
     // let res = client.delete_annotation(904);
     // println!("{:#?}", res);
 
-    let res = client.get_annotations(1798248);
+    // let res = client.get_annotations(1798248);
+    // println!("{:#?}", res);
+
+    // let mut annotations = res.unwrap();
+
+    // let mut annotation = &mut annotations[0]; // assume we have one
+    // annotation.text = "HAHAHA HIJACKED".to_owned();
+
+    // let res = client.update_annotation(&annotation);
+    // println!("{:#?}", res);
+
+    let res = client.get_api_version();
     println!("{:#?}", res);
 
-    let mut annotations = res.unwrap();
 
-    let mut annotation = &mut annotations[0]; // assume we have one
-    annotation.text = "HAHAHA HIJACKED".to_owned();
-
-    let res = client.update_annotation(&annotation);
-    println!("{:#?}", res);
 }

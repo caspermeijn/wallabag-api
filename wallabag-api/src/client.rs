@@ -306,4 +306,12 @@ impl Client {
 
         Ok(entries)
     }
+
+    /// Get the API version. Probably not useful because if the version isn't v2
+    /// then this library won't work anyway.
+    pub fn get_api_version(&mut self) -> ClientResult<String> {
+        let version: String = self.smart_json_q(Method::GET, EndPoint::Version, UNIT, UNIT)?;
+        Ok(version)
+    }
+
 }

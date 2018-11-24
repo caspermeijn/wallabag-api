@@ -57,5 +57,5 @@ Provides types and functions for interacting with a Wallabag server.
       Retrieve current logged in user informations.
 - [ ] PUT `/api/user.{_format}`
       Register an user and create a client.
-- [ ] GET `/api/version.{_format}`
+- [X] GET `/api/version.{_format}`
       Retrieve version number.
