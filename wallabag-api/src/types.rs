@@ -59,7 +59,7 @@ pub struct Entry {
 
 pub type Annotations = Vec<Annotation>;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Annotation {
     pub annotator_schema_version: String,
     pub created_at: String,

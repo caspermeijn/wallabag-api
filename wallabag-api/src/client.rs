@@ -184,6 +184,18 @@ impl Client {
         Ok(entry)
     }
 
+    /// Update an annotation.
+    pub fn update_annotation(&mut self, annotation: &Annotation) -> ClientResult<Annotation> {
+        let json: Annotation = self.smart_json_q(
+            Method::PUT,
+            EndPoint::Annotation(annotation.id),
+            UNIT,
+            annotation,
+        )?;
+
+        Ok(json)
+    }
+
     /// Create a new annotation on an entry.
     pub fn create_annotation(
         &mut self,
