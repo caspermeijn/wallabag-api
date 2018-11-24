@@ -9,7 +9,7 @@ Provides types and functions for interacting with a Wallabag server.
 
 - [X] DELETE `/api/annotations/{annotation}.{_format}`
       Removes an annotation.
-- [ ] PUT `/api/annotations/{annotation}.{_format}`
+- [X] PUT `/api/annotations/{annotation}.{_format}`
       Updates an annotation.
 - [X] GET `/api/annotations/{entry}.{_format}`
       Retrieve annotations for an entry.
@@ -17,7 +17,7 @@ Provides types and functions for interacting with a Wallabag server.
       Creates a new annotation.
 - [-] GET `/api/entries.{_format}`
       Retrieve all entries. It could be filtered by many options.
-- [ ] POST `/api/entries.{_format}`
+- [X] POST `/api/entries.{_format}`
       Create an entry.
 - [ ] GET `/api/entries/exists.{_format}`
       Check if an entry exist by url.

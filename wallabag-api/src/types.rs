@@ -1,5 +1,9 @@
 use serde_derive::{Deserialize, Serialize};
 
+mod new_entry;
+
+pub use self::new_entry::NewEntry;
+
 #[derive(Deserialize, Debug)]
 pub struct TokenInfo {
     pub access_token: String,
@@ -29,16 +33,16 @@ pub type Entries = Vec<Entry>;
 /// annotations and tags).
 #[derive(Deserialize, Debug)]
 pub struct Entry {
-    pub annotations: Annotations,
+    pub annotations: Option<Annotations>,
     pub content: Option<String>,
     pub created_at: String,
     pub domain_name: Option<String>,
-    pub headers: Option<String>, // TODO: probably not string
+    pub headers: Option<String>, // TODO: probably not string?
     pub http_status: Option<String>,
     pub id: u32,
-    pub is_archived: u32,
+    pub is_archived: u32,  // 1 or 0 TODO: encode in enum or cast to bool
     pub is_public: bool,
-    pub is_starred: u32,
+    pub is_starred: u32,  // same as is_archived
     pub language: Option<String>, // TODO: probably not string
     pub mimetype: Option<String>,
     pub origin_url: Option<String>,
@@ -56,6 +60,7 @@ pub struct Entry {
     pub user_id: u32,
     pub user_name: String,
 }
+
 
 pub type Annotations = Vec<Annotation>;
 
@@ -100,7 +105,6 @@ pub struct PaginatedEntries {
     pub page: u32,
     pub pages: u32,
     pub total: u32,
-    // TODO: _links ?
     pub _embedded: EmbeddedEntries,
 }
 
@@ -109,9 +113,9 @@ pub struct EmbeddedEntries {
     pub items: Entries,
 }
 
-// a little trick to get aronud having to provide type annotations for a unit or
+// a little trick to get around having to provide type annotations for a unit or
 // none value when passing to url serializer
 #[derive(Serialize, Debug)]
-pub struct Unit {}
-pub static UNIT: &Unit = &Unit {};
+pub(crate) struct Unit {}
+pub(crate) static UNIT: &Unit = &Unit {};
 

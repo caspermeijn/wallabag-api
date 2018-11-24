@@ -10,8 +10,8 @@ use serde_json::{from_value, Value};
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
-    Annotation, Annotations, AuthInfo, Config, Entries, Entry, NewAnnotation, PaginatedEntries,
-    TokenInfo, UNIT,
+    Annotation, Annotations, AuthInfo, Config, Entries, Entry, NewAnnotation, NewEntry,
+    PaginatedEntries, TokenInfo, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -173,6 +173,15 @@ impl Client {
         }
 
         Ok(response.error_for_status()?.json()?)
+    }
+
+    /// Add a new entry
+    pub fn create_entry(&mut self, new_entry: &NewEntry) -> ClientResult<Entry> {
+        let json: Value = self.smart_json_q(Method::POST, EndPoint::Entries, UNIT, new_entry)?;
+
+        let entry = from_value(json)?;
+
+        Ok(entry)
     }
 
     /// Get an entry by id.
