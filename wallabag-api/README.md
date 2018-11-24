@@ -11,7 +11,7 @@ Provides types and functions for interacting with a Wallabag server.
       Removes an annotation.
 - [ ] PUT `/api/annotations/{annotation}.{_format}`
       Updates an annotation.
-- [ ] GET `/api/annotations/{entry}.{_format}`
+- [X] GET `/api/annotations/{entry}.{_format}`
       Retrieve annotations for an entry.
 - [ ] POST `/api/annotations/{entry}.{_format}`
       Creates a new annotation.

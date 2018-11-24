@@ -15,12 +15,13 @@ pub fn main() {
         base_url: "https://framabag.org".to_owned(),
     };
 
-    println!("{:?}", config);
+    println!("{:#?}", config);
 
     let mut client = Client::new(config);
 
     // let res = api.get_entry(1798248);
-    let res = client.get_entries();
+    // let res = client.get_entries();
+    let res = client.get_annotations(1798248);
 
     println!("{:#?}", res);
 }

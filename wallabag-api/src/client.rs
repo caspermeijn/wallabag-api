@@ -7,9 +7,9 @@ use serde::de::DeserializeOwned;
 use serde_json::{from_value, Value};
 
 // local imports
-use crate::errors::ClientResult;
+use crate::errors::{ClientResult, ClientError};
 use crate::types::{
-    AuthInfo, Config, Entries, Entry, PaginatedEntries, ResponseError, TokenInfo, Verb,
+    AuthInfo, Config, Entries, Entry, PaginatedEntries, ResponseError, TokenInfo, Verb, Annotations
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -176,17 +176,25 @@ impl Client {
     }
 
     /// Get all annotations for an entry (by id).
-    pub fn get_annotations(&mut self, id: u32) -> ClientResult<Entry> {
+    pub fn get_annotations(&mut self, id: u32) -> ClientResult<Annotations> {
         let json: Value = self.json_q(
             Verb::Get,
-            EndPoint::Entry(id),
+            EndPoint::Annotations(id),
             &HashMap::new(),
             &HashMap::new(),
         )?;
 
-        let entry = from_value(json)?;
+        // extract the embedded annotations vec from the Value
+        match json {
+            Value::Object(map) => {
+                if let Some(Value::Array(vec)) = map.get("rows") {
+                    return Ok(from_value(Value::Array(vec.to_vec()))?);
+                }
+            }
+            _ => (),
+        }
 
-        Ok(entry)
+        Err(ClientError::OtherError)
     }
 
     /// Get all entries. TODO: filters

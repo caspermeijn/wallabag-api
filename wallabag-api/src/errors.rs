@@ -8,6 +8,8 @@ pub enum ClientError {
     OtherError,
 }
 
+// TODO: extract reqwest errors and turn them into more useful ClientErrors
+
 // so we can use ? with reqwest in methods and still return ClientError
 impl From<reqwest::Error> for ClientError {
     fn from(err: reqwest::Error) -> ClientError {
