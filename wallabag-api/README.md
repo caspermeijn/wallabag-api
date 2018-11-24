@@ -19,7 +19,7 @@ Provides types and functions for interacting with a Wallabag server.
       Retrieve all entries. It could be filtered by many options.
 - [X] POST `/api/entries.{_format}`
       Create an entry.
-- [ ] GET `/api/entries/exists.{_format}`
+- [X] GET `/api/entries/exists.{_format}`
       Check if an entry exist by url.
 - [ ] DELETE `/api/entries/list.{_format}`
       Handles an entries list and delete URL.

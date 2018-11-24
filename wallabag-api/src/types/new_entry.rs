@@ -1,14 +1,20 @@
 use serde_derive::{Deserialize, Serialize};
 
-/// A struct representing an entry to be created
-/// note from docs: If you want to provide the HTML content (which means
-/// wallabag won't fetch it from the url), you must provide content, title & url
-/// fields non-empty.
+/// A struct representing an entry to be created.
+/// At least `url` must be provided. If you wish to provide the HTML content you
+/// must also provide `content` and `title` to prevent the wallabag server from
+/// fetching it from the url.
+///
+/// TODO: document either fields
 #[derive(Deserialize, Serialize, Debug)]
 pub struct NewEntry {
     pub url: String,
     pub title: Option<String>,
+
+    /// "tag1,tag2,tag3"
     pub tags: Option<String>, // format: "tag1,tag2,tag3" TODO: method to convert Tags to this
+
+    // TODO: research serde auto serialize 0/1 values into bool and viceverse
     pub archive: Option<u32>, // 0 or 1
     pub starred: Option<u32>, // 0 or 1  // TODO: enum for this?
     pub content: Option<String>,

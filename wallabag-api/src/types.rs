@@ -40,9 +40,9 @@ pub struct Entry {
     pub headers: Option<String>, // TODO: probably not string?
     pub http_status: Option<String>,
     pub id: u32,
-    pub is_archived: u32,  // 1 or 0 TODO: encode in enum or cast to bool
+    pub is_archived: u32, // 1 or 0 TODO: encode in enum or cast to bool
     pub is_public: bool,
-    pub is_starred: u32,  // same as is_archived
+    pub is_starred: u32,          // same as is_archived
     pub language: Option<String>, // TODO: probably not string
     pub mimetype: Option<String>,
     pub origin_url: Option<String>,
@@ -60,7 +60,6 @@ pub struct Entry {
     pub user_id: u32,
     pub user_name: String,
 }
-
 
 pub type Annotations = Vec<Annotation>;
 
@@ -82,6 +81,11 @@ pub struct NewAnnotation {
     pub ranges: Vec<Range>,
     pub text: String,
     pub user: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub(crate) struct ExistsResponse {
+    pub exists: Option<u32>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -118,4 +122,3 @@ pub struct EmbeddedEntries {
 #[derive(Serialize, Debug)]
 pub(crate) struct Unit {}
 pub(crate) static UNIT: &Unit = &Unit {};
-

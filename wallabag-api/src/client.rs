@@ -10,8 +10,8 @@ use serde_json::{from_value, Value};
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
-    Annotation, Annotations, AuthInfo, Config, Entries, Entry, NewAnnotation, NewEntry,
-    PaginatedEntries, TokenInfo, UNIT,
+    Annotation, Annotations, AuthInfo, Config, Entries, Entry, ExistsResponse, NewAnnotation,
+    NewEntry, PaginatedEntries, TokenInfo, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -173,6 +173,18 @@ impl Client {
         }
 
         Ok(response.error_for_status()?.json()?)
+    }
+
+    /// check if a url already has an entry recorded.
+    pub fn check_exists(&mut self, url: &str) -> ClientResult<Option<u32>> {
+        let mut params = HashMap::new();
+        params.insert("url".to_owned(), url.to_owned());
+        params.insert("return_id".to_owned(), "1".to_owned());
+
+        let exists_info: ExistsResponse =
+            self.smart_json_q(Method::GET, EndPoint::Exists, &params, UNIT)?;
+
+        Ok(exists_info.exists)
     }
 
     /// Add a new entry
