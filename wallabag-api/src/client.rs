@@ -4,12 +4,14 @@ use std::collections::HashMap;
 // extern crates
 use reqwest::{self, Method, StatusCode};
 use serde::de::DeserializeOwned;
+use serde::ser::Serialize;
 use serde_json::{from_value, Value};
 
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
-    Annotation, Annotations, AuthInfo, Config, Entries, Entry, PaginatedEntries, TokenInfo,
+    Annotation, Annotations, AuthInfo, Config, Entries, Entry, NewAnnotation, PaginatedEntries,
+    TokenInfo, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -61,13 +63,8 @@ impl Client {
         fields.insert("username".to_owned(), self.auth_info.username.clone());
         fields.insert("password".to_owned(), self.auth_info.password.clone());
 
-        let token_info: TokenInfo = self.json_q(
-            Method::POST,
-            EndPoint::Token,
-            &HashMap::new(),
-            &fields,
-            false,
-        )?;
+        let token_info: TokenInfo =
+            self.json_q(Method::POST, EndPoint::Token, UNIT, &fields, false)?;
         self.token_info = Some(token_info);
 
         Ok(())
@@ -91,13 +88,8 @@ impl Client {
             self.token_info.as_ref().unwrap().refresh_token.clone(),
         );
 
-        let token_info: TokenInfo = self.json_q(
-            Method::POST,
-            EndPoint::Token,
-            &HashMap::new(),
-            &fields,
-            false,
-        )?;
+        let token_info: TokenInfo =
+            self.json_q(Method::POST, EndPoint::Token, UNIT, &fields, false)?;
         self.token_info = Some(token_info);
 
         Ok(())
@@ -106,17 +98,19 @@ impl Client {
     /// Smartly run a request that expects to receive json back. Handles adding
     /// authorization headers, and retry on expired token.
     /// TODO: more abstract types for query and json
-    fn smart_json_q<T>(
+    fn smart_json_q<T, J, Q>(
         &mut self,
         method: Method,
         end_point: EndPoint,
-        query: &HashMap<String, String>,
-        json: &HashMap<String, String>,
+        query: &Q,
+        json: &J,
     ) -> ClientResult<T>
     where
         T: DeserializeOwned,
+        J: Serialize + ?Sized,
+        Q: Serialize + ?Sized,
     {
-        let response_result = self.json_q(method.clone(), end_point, &query, json, true);
+        let response_result = self.json_q(method.clone(), end_point, query, json, true);
 
         match response_result {
             Err(ClientError::Unauthorized(ref err)) => {
@@ -125,7 +119,7 @@ impl Client {
                     self.refresh_token()?;
 
                     // try the request again now
-                    return Ok(self.json_q(method, end_point, &query, json, true)?);
+                    return Ok(self.json_q(method, end_point, query, json, true)?);
                 }
             }
             _ => (),
@@ -135,20 +129,22 @@ impl Client {
     }
 
     /// Just build and send a single request.
-    fn json_q<T>(
+    fn json_q<T, J, Q>(
         &mut self,
         method: Method,
         end_point: EndPoint,
-        query: &HashMap<String, String>,
-        json: &HashMap<String, String>,
+        query: &Q,
+        json: &J,
         use_token: bool,
     ) -> ClientResult<T>
     where
         T: DeserializeOwned,
+        J: Serialize + ?Sized,
+        Q: Serialize + ?Sized,
     {
         let url = self.url.build(end_point);
 
-        let mut request = self.client.request(method, &url).query(&query).json(&json);
+        let mut request = self.client.request(method, &url).query(query).json(json);
 
         if use_token {
             request = request.header(
@@ -170,6 +166,9 @@ impl Client {
                     return Err(ClientError::Unauthorized(info));
                 }
             }
+            StatusCode::NOT_FOUND => {
+                return Err(ClientError::NotFound);
+            }
             _ => (),
         }
 
@@ -178,38 +177,40 @@ impl Client {
 
     /// Get an entry by id.
     pub fn get_entry(&mut self, id: u32) -> ClientResult<Entry> {
-        let json: Value = self.smart_json_q(
-            Method::GET,
-            EndPoint::Entry(id),
-            &HashMap::new(),
-            &HashMap::new(),
-        )?;
+        let json: Value = self.smart_json_q(Method::GET, EndPoint::Entry(id), UNIT, UNIT)?;
 
         let entry = from_value(json)?;
 
         Ok(entry)
     }
 
+    /// Create a new annotation on an entry.
+    pub fn create_annotation(
+        &mut self,
+        entry_id: u32,
+        annotation: NewAnnotation,
+    ) -> ClientResult<Annotation> {
+        let json: Annotation = self.smart_json_q(
+            Method::POST,
+            EndPoint::Annotation(entry_id),
+            UNIT,
+            &annotation,
+        )?;
+
+        Ok(json)
+    }
+
     /// Delete an annotation by id
     pub fn delete_annotation(&mut self, id: u32) -> ClientResult<Annotation> {
-        let json: Annotation = self.smart_json_q(
-            Method::DELETE,
-            EndPoint::Annotations(id),
-            &HashMap::new(),
-            &HashMap::new(),
-        )?;
+        let json: Annotation =
+            self.smart_json_q(Method::DELETE, EndPoint::Annotation(id), UNIT, UNIT)?;
 
         Ok(json)
     }
 
     /// Get all annotations for an entry (by id).
     pub fn get_annotations(&mut self, id: u32) -> ClientResult<Annotations> {
-        let json: Value = self.smart_json_q(
-            Method::GET,
-            EndPoint::Annotations(id),
-            &HashMap::new(),
-            &HashMap::new(),
-        )?;
+        let json: Value = self.smart_json_q(Method::GET, EndPoint::Annotation(id), UNIT, UNIT)?;
 
         // extract the embedded annotations vec from the Value
         match json {
@@ -233,7 +234,7 @@ impl Client {
         // fine here.
         loop {
             let json: PaginatedEntries =
-                self.smart_json_q(Method::GET, EndPoint::Entries, &params, &HashMap::new())?;
+                self.smart_json_q(Method::GET, EndPoint::Entries, &params, UNIT)?;
             println!("{}", json.page);
 
             entries.extend(json._embedded.items.into_iter());

@@ -5,7 +5,7 @@ pub enum EndPoint {
     Token,
     Entries,
     Entry(u32),
-    Annotations(u32),
+    Annotation(u32),
 }
 
 impl fmt::Display for EndPoint {
@@ -18,7 +18,7 @@ impl fmt::Display for EndPoint {
                 Token => "/oauth/v2/token".to_owned(),
                 Entries => "/api/entries.json".to_owned(),
                 Entry(i) => format!("/api/entries/{}.json", i),
-                Annotations(i) => format!("/api/annotations/{}.json", i),
+                Annotation(i) => format!("/api/annotations/{}.json", i),
             }
         )
     }

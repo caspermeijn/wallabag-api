@@ -1,4 +1,4 @@
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct TokenInfo {
@@ -71,7 +71,15 @@ pub struct Annotation {
     pub user: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Serialize, Debug)]
+pub struct NewAnnotation {
+    pub quote: String,
+    pub ranges: Vec<Range>,
+    pub text: String,
+    pub user: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Range {
     pub end: String,
     pub endOffset: String,
@@ -100,3 +108,10 @@ pub struct PaginatedEntries {
 pub struct EmbeddedEntries {
     pub items: Entries,
 }
+
+// a little trick to get aronud having to provide type annotations for a unit or
+// none value when passing to url serializer
+#[derive(Serialize, Debug)]
+pub struct Unit {}
+pub static UNIT: &Unit = &Unit {};
+

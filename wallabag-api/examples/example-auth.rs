@@ -1,6 +1,6 @@
 use std::env;
 
-use wallabag_api::types::{AuthInfo, Config};
+use wallabag_api::types::{AuthInfo, Config, NewAnnotation, Range};
 use wallabag_api::Client;
 
 pub fn main() {
@@ -27,6 +27,20 @@ pub fn main() {
     // let res = client.delete_annotation(904);
     // println!("{:#?}", res);
 
-    let res = client.get_annotations(1798248);
+    // let res = client.get_annotations(1798248);
+    // println!("{:#?}", res);
+
+    let res = client.create_annotation(0, NewAnnotation {
+        quote: "Below is a snippet from main.c (source):".to_owned(), 
+        ranges: vec![Range {
+            end: "/p[4]".to_owned(),
+            endOffset: "253".to_owned(),
+            start: "/p[4]".to_owned(),
+            startOffset: "213".to_owned(),
+        }],
+        text: "Thing".to_owned(),
+        user: None,
+    });
+
     println!("{:#?}", res);
 }
