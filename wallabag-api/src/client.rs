@@ -11,7 +11,7 @@ use serde_json::{from_value, Value};
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
     Annotation, Annotations, AuthInfo, Config, Entries, Entry, ExistsResponse, NewAnnotation,
-    NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, TokenInfo, User, UNIT,
+    NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tags, TokenInfo, User, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -306,6 +306,11 @@ impl Client {
         println!("{:#?}", entries);
 
         Ok(entries)
+    }
+
+    /// Get a list of all tags.
+    pub fn get_tags(&mut self) -> ClientResult<Tags> {
+        self.smart_json_q(Method::GET, EndPoint::Tags, UNIT, UNIT)
     }
 
     /// Get the API version. Probably not useful because if the version isn't v2

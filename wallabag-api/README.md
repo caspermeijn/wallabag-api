@@ -47,7 +47,7 @@ Provides types and functions for interacting with a Wallabag server.
       Permanently remove one tag for an entry.
 - [ ] DELETE `/api/tag/label.{_format}`
       Permanently remove one tag from every entry by passing the Tag label.
-- [ ] GET `/api/tags.{_format}`
+- [X] GET `/api/tags.{_format}`
       Retrieve all tags.
 - [ ] DELETE `/api/tags/label.{_format}`
       Permanently remove some tags from every entry.

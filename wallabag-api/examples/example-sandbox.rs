@@ -52,5 +52,8 @@ pub fn main() {
     // println!("{:#?}", res);
 
 
+    let res = client.get_tags();
+    println!("{:#?}", res);
+
 
 }

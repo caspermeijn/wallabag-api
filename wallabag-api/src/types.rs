@@ -53,7 +53,7 @@ pub struct Entry {
     pub published_by: Option<String>,
     pub reading_time: u32,
     pub starred_at: Option<String>,
-    pub tags: Vec<Tag>,
+    pub tags: Tags,
     pub title: Option<String>,
     pub uid: Option<String>,
     pub updated_at: String,
@@ -97,6 +97,8 @@ pub struct Range {
     pub start: String,
     pub startOffset: String,
 }
+
+pub type Tags = Vec<Tag>;
 
 #[derive(Deserialize, Debug)]
 pub struct Tag {
