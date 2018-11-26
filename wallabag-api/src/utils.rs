@@ -1,13 +1,14 @@
 use std::fmt;
 
 #[derive(Debug, Clone, Copy)]
-pub enum EndPoint {
+pub(crate) enum EndPoint {
     Token,
     Entries,
     Exists,
     Version,
     User,
     Tags,
+    TagsLabel,
     Tag(u32),
     Entry(u32),
     Annotation(u32),
@@ -26,6 +27,7 @@ impl fmt::Display for EndPoint {
                 Version => "/api/version.json".to_owned(),
                 User => "/api/user.json".to_owned(),
                 Tags => "/api/tags.json".to_owned(),
+                TagsLabel => "/api/tags/label.json".to_owned(),
                 Tag(i) => format!("/api/tags/{}.json", i),
                 Entry(i) => format!("/api/entries/{}.json", i),
                 Annotation(i) => format!("/api/annotations/{}.json", i),
@@ -34,16 +36,16 @@ impl fmt::Display for EndPoint {
     }
 }
 
-pub struct UrlBuilder {
+pub(crate) struct UrlBuilder {
     base_url: String,
 }
 
 impl UrlBuilder {
-    pub fn new(base_url: String) -> Self {
+    pub(crate) fn new(base_url: String) -> Self {
         UrlBuilder { base_url }
     }
 
-    pub fn build(&self, end_point: EndPoint) -> String {
+    pub(crate) fn build(&self, end_point: EndPoint) -> String {
         format!("{}{}", self.base_url, end_point)
     }
 }

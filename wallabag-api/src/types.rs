@@ -108,7 +108,7 @@ pub struct Tag {
 }
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct DeletedTag {
+pub struct DeletedTag {
     pub label: String,
     pub slug: String,
 }

@@ -11,8 +11,8 @@ use serde_json::{from_value, Value};
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
     Annotation, Annotations, AuthInfo, Config, DeletedTag, Entries, Entry, ExistsResponse,
-    NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tags, TokenInfo, Tag,
-    User, UNIT,
+    NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tag, Tags,
+    TokenInfo, User, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -168,6 +168,7 @@ impl Client {
                 }
             }
             StatusCode::NOT_FOUND => {
+                println!("{:#?}", response.text());
                 return Err(ClientError::NotFound);
             }
             _ => (),
@@ -313,6 +314,9 @@ impl Client {
     }
 
     /// Permanently delete a tag by id. This removes the tag from all entries.
+    /// Appears to return success if attempting to delete a tag by id that
+    /// exists on the server but isn't accessible to the user. TODO: log
+    /// security ticket.
     pub fn delete_tag(&mut self, id: u32) -> ClientResult<Tag> {
         // api does not return id of deleted tag, hence the temporary struct
         let dt: DeletedTag = self.smart_json_q(Method::DELETE, EndPoint::Tag(id), UNIT, UNIT)?;
@@ -322,6 +326,24 @@ impl Client {
             label: dt.label,
             slug: dt.slug,
         })
+    }
+
+    /// Permanently batch delete tags by labels (tag names). Returns not found
+    /// if _all_ labels not found. If at least one found, then returns ok. For
+    /// some reason, (at least the framabag instance) the server returns success
+    /// and the tag data on attempting to delete for innaccessible tags (tags by
+    /// other users?).
+    ///
+    /// Returns a list of tags that were deleted.
+    pub fn delete_tags_by_label(&mut self, tags: Vec<String>) -> ClientResult<Vec<DeletedTag>> {
+        let tags = tags.join(",");
+        let mut params = HashMap::new();
+        params.insert("tags".to_owned(), tags);
+
+        // note: api doesn't return tag ids and no way to obtain since deleted
+        // by label
+        let json: Vec<DeletedTag> = self.smart_json_q(Method::DELETE, EndPoint::TagsLabel, &params, UNIT)?;
+        Ok(json)
     }
 
     /// Get the API version. Probably not useful because if the version isn't v2

@@ -49,9 +49,9 @@ Provides types and functions for interacting with a Wallabag server.
       Permanently remove one tag from every entry by passing the Tag label.
 - [X] GET `/api/tags.{_format}`
       Retrieve all tags.
-- [ ] DELETE `/api/tags/label.{_format}`
+- [X] DELETE `/api/tags/label.{_format}`
       Permanently remove some tags from every entry.
-- [ ] DELETE `/api/tags/{tag}.{_format}`
+- [X] DELETE `/api/tags/{tag}.{_format}`
       Permanently remove one tag from every entry by passing the Tag ID.
 - [X] GET `/api/user.{_format}`
       Retrieve current logged in user informations.
