@@ -364,6 +364,12 @@ impl Client {
         Ok(data)
     }
 
+    /// Get a list of all tags for an entry by entry id.
+    pub fn get_tags_for_entry(&mut self, entry_id: u32) -> ClientResult<Tags> {
+        self.smart_json_q(Method::GET, EndPoint::EntryTags(entry_id), UNIT, UNIT)
+    }
+
+
     /// Get a list of all tags.
     pub fn get_tags(&mut self) -> ClientResult<Tags> {
         self.smart_json_q(Method::GET, EndPoint::Tags, UNIT, UNIT)

@@ -39,7 +39,7 @@ Provides types and functions for interacting with a Wallabag server.
       Retrieve a single entry as a predefined format.
 - [ ] PATCH `/api/entries/{entry}/reload.{_format}`
       Reload an entry.
-- [ ] GET `/api/entries/{entry}/tags.{_format}`
+- [X] GET `/api/entries/{entry}/tags.{_format}`
       Retrieve all tags for an entry.
 - [ ] POST `/api/entries/{entry}/tags.{_format}`
       Add one or more tags to an entry.
