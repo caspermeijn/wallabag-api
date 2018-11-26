@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 // extern crates
-use reqwest::{self, Method, StatusCode};
+use reqwest::{self, Method, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 use serde_json::{from_value, Value};
@@ -14,7 +14,7 @@ use crate::types::{
     NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tag, Tags,
     TokenInfo, User, UNIT,
 };
-use crate::utils::{EndPoint, UrlBuilder, Format};
+use crate::utils::{EndPoint, Format, UrlBuilder};
 
 /// The main thing that provides all the methods for interacting with the
 /// wallabag api.
@@ -96,9 +96,8 @@ impl Client {
         Ok(())
     }
 
-    /// Smartly run a request that expects to receive raw text back. Handles adding
+    /// Smartly run a request that expects to receive json back. Handles adding
     /// authorization headers, and retry on expired token.
-    /// TODO: less duplication; work out how to merge with smart_json_q
     fn smart_text_q<J, Q>(
         &mut self,
         method: Method,
@@ -110,74 +109,8 @@ impl Client {
         J: Serialize + ?Sized,
         Q: Serialize + ?Sized,
     {
-        let response_result = self.text_q(method.clone(), end_point, query, json, true);
-
-        match response_result {
-            Err(ClientError::Unauthorized(ref err)) => {
-                if err.error_description.as_str().contains("expired") {
-                    // let's just try refreshing the token
-                    self.refresh_token()?;
-
-                    // try the request again now
-                    return Ok(self.text_q(method, end_point, query, json, true)?);
-                }
-            }
-            _ => (),
-        }
-
-        Ok(response_result?)
+        Ok(self.smart_q(method, end_point, query, json)?.text()?)
     }
-
-
-    /// Just build and send a single request.
-    fn text_q<J, Q>(
-        &mut self,
-        method: Method,
-        end_point: EndPoint,
-        query: &Q,
-        json: &J,
-        use_token: bool,
-    ) -> ClientResult<String>
-    where
-        J: Serialize + ?Sized,
-        Q: Serialize + ?Sized,
-    {
-        let url = self.url.build(end_point);
-
-        let mut request = self.client.request(method, &url).query(query).json(json);
-
-        if use_token {
-            request = request.header(
-                reqwest::header::AUTHORIZATION,
-                format!("Bearer {}", self.get_token()?),
-            );
-        }
-
-        let mut response = request.send()?;
-
-        // main error handling here
-        // TODO: handle more cases
-        match response.status() {
-            StatusCode::UNAUTHORIZED => {
-                let info: ResponseError = response.json()?;
-                if info.error_description.as_str().contains("expired") {
-                    return Err(ClientError::ExpiredToken);
-                } else {
-                    return Err(ClientError::Unauthorized(info));
-                }
-            }
-            StatusCode::NOT_FOUND => {
-                println!("{:#?}", response.text());
-                return Err(ClientError::NotFound);
-            }
-            _ => (),
-            // TODO: try to parse json error message on error status
-        }
-
-        // TODO: don't error for status
-        Ok(response.error_for_status()?.text()?)
-    }
-
 
 
     /// Smartly run a request that expects to receive json back. Handles adding
@@ -194,7 +127,23 @@ impl Client {
         J: Serialize + ?Sized,
         Q: Serialize + ?Sized,
     {
-        let response_result = self.json_q(method.clone(), end_point, query, json, true);
+        Ok(self.smart_q(method, end_point, query, json)?.json()?)
+    }
+
+    /// Smartly run a request that expects to receive json back. Handles adding
+    /// authorization headers, and retry on expired token.
+    fn smart_q<J, Q>(
+        &mut self,
+        method: Method,
+        end_point: EndPoint,
+        query: &Q,
+        json: &J,
+    ) -> ClientResult<Response>
+    where
+        J: Serialize + ?Sized,
+        Q: Serialize + ?Sized,
+    {
+        let response_result = self.q(method.clone(), end_point, query, json, true);
 
         match response_result {
             Err(ClientError::Unauthorized(ref err)) => {
@@ -203,7 +152,7 @@ impl Client {
                     self.refresh_token()?;
 
                     // try the request again now
-                    return Ok(self.json_q(method, end_point, query, json, true)?);
+                    return Ok(self.q(method, end_point, query, json, true)?);
                 }
             }
             _ => (),
@@ -211,7 +160,9 @@ impl Client {
 
         Ok(response_result?)
     }
-    /// Just build and send a single request.
+
+    /// Just build and send a single request. Returns a json deserializable
+    /// response.
     fn json_q<T, J, Q>(
         &mut self,
         method: Method,
@@ -222,6 +173,22 @@ impl Client {
     ) -> ClientResult<T>
     where
         T: DeserializeOwned,
+        J: Serialize + ?Sized,
+        Q: Serialize + ?Sized,
+    {
+        Ok(self.q(method, end_point, query, json, use_token)?.json()?)
+    }
+
+    /// Just build and send a single request.
+    fn q<J, Q>(
+        &mut self,
+        method: Method,
+        end_point: EndPoint,
+        query: &Q,
+        json: &J,
+        use_token: bool,
+    ) -> ClientResult<Response>
+    where
         J: Serialize + ?Sized,
         Q: Serialize + ?Sized,
     {
@@ -258,7 +225,7 @@ impl Client {
         }
 
         // TODO: don't error for status
-        Ok(response.error_for_status()?.json()?)
+        Ok(response.error_for_status()?)
     }
 
     /// Check if a list of urls already have entries. This is more efficient if
@@ -426,7 +393,8 @@ impl Client {
         let mut params = HashMap::new();
         params.insert("tag".to_owned(), label);
 
-        let deleted_tag: DeletedTag = self.smart_json_q(Method::DELETE, EndPoint::TagLabel, &params, UNIT)?;
+        let deleted_tag: DeletedTag =
+            self.smart_json_q(Method::DELETE, EndPoint::TagLabel, &params, UNIT)?;
         Ok(deleted_tag)
     }
 
@@ -444,7 +412,8 @@ impl Client {
 
         // note: api doesn't return tag ids and no way to obtain since deleted
         // by label
-        let json: Vec<DeletedTag> = self.smart_json_q(Method::DELETE, EndPoint::TagsLabel, &params, UNIT)?;
+        let json: Vec<DeletedTag> =
+            self.smart_json_q(Method::DELETE, EndPoint::TagsLabel, &params, UNIT)?;
         Ok(json)
     }
 
