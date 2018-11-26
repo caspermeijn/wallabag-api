@@ -17,6 +17,7 @@ pub enum ClientError {
     ExpiredToken,
     UnexpectedJsonStructure, // eg returned valid json but didn't fit model
     NotFound,  // 404
+    NotModified,  // 304
 }
 
 // TODO: extract reqwest errors and turn them into more useful ClientErrors

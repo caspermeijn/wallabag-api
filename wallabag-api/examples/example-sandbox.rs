@@ -80,19 +80,53 @@ pub fn main() {
     // let res = client.delete_entry(1801020);
     // println!("{:#?}", res);
 
-    let res = client.update_entry(1801067, &PatchEntry {
-        title: Some("EDITED :)".to_owned()),
-        tags: None,
-        archive: None,
-        starred: Some(0),
-        content: None,
-        language: None,
-        preview_picture: None,
-        published_at: None,
-        authors: None,
-        public: None,
-        origin_url: None,
+    // let res = client.get_entry(1801067);
+    // match res {
+    //     Ok(entry) => {
+    //         println!("content: {:?}", entry.content);
+    //     }
+    //     Err(e) => {
+    //         println!("{:?}", e);
+    //     }
+    // }
 
-    });
+    // let res = client.update_entry(1801067, &PatchEntry {
+    //     title: Some("EDITED :)".to_owned()),
+    //     tags: None,
+    //     archive: None,
+    //     starred: Some(0),
+    //     content: Some("lol wat".to_owned()),
+    //     language: None,
+    //     preview_picture: None,
+    //     published_at: None,
+    //     authors: None,
+    //     public: None,
+    //     origin_url: None,
+
+    // });
+    // println!("{:#?}", res);
+
+    // let res = client.get_entry(1801067);
+    // match res {
+    //     Ok(entry) => {
+    //         println!("content: {:?}", entry.content);
+    //     }
+    //     Err(e) => {
+    //         println!("{:?}", e);
+    //     }
+    // }
+
+    let res = client.reload_entry(1801932);
     println!("{:#?}", res);
+
+    // let res = client.get_entry(1801067);
+    // match res {
+    //     Ok(entry) => {
+    //         println!("content: {:?}", entry.content);
+    //     }
+    //     Err(e) => {
+    //         println!("{:?}", e);
+    //     }
+    // }
+
 }

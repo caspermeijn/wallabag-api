@@ -204,6 +204,8 @@ impl Client {
 
         let mut response = request.send()?;
 
+        println!("response status: {:#?}", response.status());
+
         // main error handling here
         // TODO: handle more cases
         match response.status() {
@@ -218,6 +220,9 @@ impl Client {
             StatusCode::NOT_FOUND => {
                 println!("{:#?}", response.text());
                 return Err(ClientError::NotFound);
+            }
+            StatusCode::NOT_MODIFIED => {
+                return Err(ClientError::NotModified); // reload entry returns this if no changes on re-crawl url or if failed to reload
             }
             _ => (),
             // TODO: try to parse json error message on error status
@@ -278,6 +283,15 @@ impl Client {
 
         println!("{:#?}", json);
         let entry = from_value(json)?;
+
+        Ok(entry)
+    }
+
+    /// Reload entry.
+    pub fn reload_entry(&mut self, id: u32) -> ClientResult<Entry> {
+
+        let entry: Entry =
+            self.smart_json_q(Method::PATCH, EndPoint::EntryReload(id), UNIT, UNIT)?;
 
         Ok(entry)
     }

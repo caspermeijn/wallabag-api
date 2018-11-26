@@ -41,6 +41,7 @@ pub(crate) enum EndPoint {
     TagsLabel,
     TagLabel,
     EntriesList,
+    EntryReload(u32),
     EntryTags(u32), // entry id
     Export(u32, Format),
     Tag(u32),
@@ -64,6 +65,7 @@ impl fmt::Display for EndPoint {
                 TagsLabel => "/api/tags/label.json".to_owned(),
                 TagLabel => "/api/tag/label.json".to_owned(),
                 EntriesList => "/api/entries/lists.json".to_owned(),
+                EntryReload(id) => format!("/api/entries/{}/reload.json", id),
                 EntryTags(id) => format!("/api/entries/{}/tags.json", id),
                 Export(id, format) => format!("/api/entries/{}/export.{}", id, format),
                 Tag(i) => format!("/api/tags/{}.json", i),

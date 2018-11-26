@@ -37,7 +37,7 @@ Provides types and functions for interacting with a Wallabag server.
       Change several properties of an entry.
 - [X] GET `/api/entries/{entry}/export.{_format}`
       Retrieve a single entry as a predefined format.
-- [ ] PATCH `/api/entries/{entry}/reload.{_format}`
+- [X] PATCH `/api/entries/{entry}/reload.{_format}`
       Reload an entry.
 - [X] GET `/api/entries/{entry}/tags.{_format}`
       Retrieve all tags for an entry.
