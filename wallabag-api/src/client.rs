@@ -445,6 +445,13 @@ impl Client {
         self.smart_json_q(Method::POST, EndPoint::EntryTags(entry_id), UNIT, &data)
     }
 
+    /// Delete a tag (by id) from an entry (by id). Returns err 404 if entry or
+    /// tag not found. Idempotent. Removing a tag that exists but doesn't exist
+    /// on the entry completes without error.
+    pub fn delete_tag_from_entry(&mut self, entry_id: u32, tag_id: u32) -> ClientResult<Entry> {
+        self.smart_json_q(Method::DELETE, EndPoint::DeleteEntryTag(entry_id, tag_id), UNIT, UNIT)
+    }
+
     /// Get a list of all tags.
     pub fn get_tags(&mut self) -> ClientResult<Tags> {
         self.smart_json_q(Method::GET, EndPoint::Tags, UNIT, UNIT)

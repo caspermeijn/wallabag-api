@@ -129,14 +129,20 @@ pub fn main() {
     //     }
     // }
 
-    let res = client.add_tags_to_entry(
+    // let res = client.add_tags_to_entry(
+    //     1801932,
+    //     vec![
+    //         "tag1".to_owned(),
+    //         "jktjbucjraontebjtaneteu".to_owned(),
+    //         "deja".to_owned(),
+    //         "wat,dis".to_owned(),
+    //     ],
+    // );
+    // println!("{:#?}", res);
+
+    let res = client.delete_tag_from_entry(
         1801932,
-        vec![
-            "tag1".to_owned(),
-            "jktjbucjraontebjtaneteu".to_owned(),
-            "deja".to_owned(),
-            "wat,dis".to_owned(),
-        ],
+        20398,
     );
     println!("{:#?}", res);
 }

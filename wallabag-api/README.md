@@ -43,7 +43,7 @@ Provides types and functions for interacting with a Wallabag server.
       Retrieve all tags for an entry.
 - [X] POST `/api/entries/{entry}/tags.{_format}`
       Add one or more tags to an entry.
-- [ ] DELETE `/api/entries/{entry}/tags/{tag}.{_format}`
+- [X] DELETE `/api/entries/{entry}/tags/{tag}.{_format}`
       Permanently remove one tag for an entry.
 - [X] DELETE `/api/tag/label.{_format}`
       Permanently remove one tag from every entry by passing the Tag label.
