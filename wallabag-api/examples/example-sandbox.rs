@@ -1,6 +1,7 @@
 use std::env;
 
 use wallabag_api::types::{AuthInfo, Config, NewAnnotation, Range, RegisterInfo};
+use wallabag_api::utils::Format;
 use wallabag_api::Client;
 
 pub fn main() {
@@ -59,17 +60,21 @@ pub fn main() {
     // let res = client.delete_tag(20382);
     // println!("{:#?}", res);
 
-    let res = client.get_tags();
-    println!("{:#?}", res);
+    // let res = client.get_tags();
+    // println!("{:#?}", res);
 
     // let res = client.delete_tags_by_label(vec!["tag1".to_owned(), "tag2".to_owned()]);
     // println!("{:#?}", res);
 
-    let res = client.delete_tag_by_label("test".to_owned());
+    // let res = client.delete_tag_by_label("test".to_owned());
+    // println!("{:#?}", res);
+
+    // let res = client.get_tags();
+    // println!("{:#?}", res);
+
+    let res = client.export_entry(1800725, Format::XML);
     println!("{:#?}", res);
 
-    let res = client.get_tags();
-    println!("{:#?}", res);
 
 
 }

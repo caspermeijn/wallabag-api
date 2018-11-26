@@ -14,7 +14,7 @@ use crate::types::{
     NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tag, Tags,
     TokenInfo, User, UNIT,
 };
-use crate::utils::{EndPoint, UrlBuilder};
+use crate::utils::{EndPoint, UrlBuilder, Format};
 
 /// The main thing that provides all the methods for interacting with the
 /// wallabag api.
@@ -96,9 +96,92 @@ impl Client {
         Ok(())
     }
 
+    /// Smartly run a request that expects to receive raw text back. Handles adding
+    /// authorization headers, and retry on expired token.
+    /// TODO: less duplication; work out how to merge with smart_json_q
+    fn smart_text_q<J, Q>(
+        &mut self,
+        method: Method,
+        end_point: EndPoint,
+        query: &Q,
+        json: &J,
+    ) -> ClientResult<String>
+    where
+        J: Serialize + ?Sized,
+        Q: Serialize + ?Sized,
+    {
+        let response_result = self.text_q(method.clone(), end_point, query, json, true);
+
+        match response_result {
+            Err(ClientError::Unauthorized(ref err)) => {
+                if err.error_description.as_str().contains("expired") {
+                    // let's just try refreshing the token
+                    self.refresh_token()?;
+
+                    // try the request again now
+                    return Ok(self.text_q(method, end_point, query, json, true)?);
+                }
+            }
+            _ => (),
+        }
+
+        Ok(response_result?)
+    }
+
+
+    /// Just build and send a single request.
+    fn text_q<J, Q>(
+        &mut self,
+        method: Method,
+        end_point: EndPoint,
+        query: &Q,
+        json: &J,
+        use_token: bool,
+    ) -> ClientResult<String>
+    where
+        J: Serialize + ?Sized,
+        Q: Serialize + ?Sized,
+    {
+        let url = self.url.build(end_point);
+
+        let mut request = self.client.request(method, &url).query(query).json(json);
+
+        if use_token {
+            request = request.header(
+                reqwest::header::AUTHORIZATION,
+                format!("Bearer {}", self.get_token()?),
+            );
+        }
+
+        let mut response = request.send()?;
+
+        // main error handling here
+        // TODO: handle more cases
+        match response.status() {
+            StatusCode::UNAUTHORIZED => {
+                let info: ResponseError = response.json()?;
+                if info.error_description.as_str().contains("expired") {
+                    return Err(ClientError::ExpiredToken);
+                } else {
+                    return Err(ClientError::Unauthorized(info));
+                }
+            }
+            StatusCode::NOT_FOUND => {
+                println!("{:#?}", response.text());
+                return Err(ClientError::NotFound);
+            }
+            _ => (),
+            // TODO: try to parse json error message on error status
+        }
+
+        // TODO: don't error for status
+        Ok(response.error_for_status()?.text()?)
+    }
+
+
+
     /// Smartly run a request that expects to receive json back. Handles adding
     /// authorization headers, and retry on expired token.
-    /// TODO: more abstract types for query and json
     fn smart_json_q<T, J, Q>(
         &mut self,
         method: Method,
@@ -128,7 +211,6 @@ impl Client {
 
         Ok(response_result?)
     }
-
     /// Just build and send a single request.
     fn json_q<T, J, Q>(
         &mut self,
@@ -175,6 +257,7 @@ impl Client {
             // TODO: try to parse json error message on error status
         }
 
+        // TODO: don't error for status
         Ok(response.error_for_status()?.json()?)
     }
 
@@ -306,6 +389,12 @@ impl Client {
         }
 
         Ok(entries)
+    }
+
+    /// Get an export of an entry in a particular format.
+    pub fn export_entry(&mut self, entry_id: u32, fmt: Format) -> ClientResult<String> {
+        let data = self.smart_text_q(Method::GET, EndPoint::Export(entry_id, fmt), UNIT, UNIT)?;
+        Ok(data)
     }
 
     /// Get a list of all tags.
