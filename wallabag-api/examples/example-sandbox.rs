@@ -1,6 +1,6 @@
 use std::env;
 
-use wallabag_api::types::{AuthInfo, Config, NewAnnotation, Range, RegisterInfo};
+use wallabag_api::types::{AuthInfo, Config, NewAnnotation, PatchEntry, Range, RegisterInfo};
 use wallabag_api::utils::Format;
 use wallabag_api::Client;
 
@@ -77,6 +77,22 @@ pub fn main() {
     // let res = client.get_tags_for_entry(1800725);
     // println!("{:#?}", res);
 
-    let res = client.delete_entry(1801020);
+    // let res = client.delete_entry(1801020);
+    // println!("{:#?}", res);
+
+    let res = client.update_entry(1801067, &PatchEntry {
+        title: Some("EDITED :)".to_owned()),
+        tags: None,
+        archive: None,
+        starred: Some(0),
+        content: None,
+        language: None,
+        preview_picture: None,
+        published_at: None,
+        authors: None,
+        public: None,
+        origin_url: None,
+
+    });
     println!("{:#?}", res);
 }

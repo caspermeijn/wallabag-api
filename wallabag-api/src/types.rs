@@ -1,9 +1,11 @@
 use serde_derive::{Deserialize, Serialize};
 
 mod new_entry;
+mod patch_entry;
 mod user;
 
 pub use self::new_entry::NewEntry;
+pub use self::patch_entry::PatchEntry;
 pub use self::user::{User, RegisterInfo, NewlyRegisteredInfo};
 
 #[derive(Deserialize, Debug)]

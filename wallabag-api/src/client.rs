@@ -10,9 +10,9 @@ use serde_json::{from_value, Value};
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
-    Annotation, Annotations, AuthInfo, Config, DeletedTag, Entries, Entry, ExistsResponse,
-    NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tag, Tags, DeletedEntry,
-    TokenInfo, User, UNIT,
+    Annotation, Annotations, AuthInfo, Config, DeletedEntry, DeletedTag, Entries, Entry,
+    ExistsResponse, NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, PatchEntry,
+    RegisterInfo, Tag, Tags, TokenInfo, User, UNIT,
 };
 use crate::utils::{EndPoint, Format, UrlBuilder};
 
@@ -270,6 +270,18 @@ impl Client {
         Ok(entry)
     }
 
+    /// Update entry. To leave an editable field unchanged, set to `None`.
+    pub fn update_entry(&mut self, id: u32, entry: &PatchEntry) -> ClientResult<Entry> {
+
+        let json: Value =
+            self.smart_json_q(Method::PATCH, EndPoint::Entry(id), UNIT, entry)?;
+
+        println!("{:#?}", json);
+        let entry = from_value(json)?;
+
+        Ok(entry)
+    }
+
     /// Get an entry by id.
     pub fn get_entry(&mut self, id: u32) -> ClientResult<Entry> {
         let json: Value = self.smart_json_q(Method::GET, EndPoint::Entry(id), UNIT, UNIT)?;
@@ -280,8 +292,10 @@ impl Client {
     }
 
     /// Delete an entry by id.
+    /// TODO: allow passing a u32 id or an Entry interchangably
     pub fn delete_entry(&mut self, id: u32) -> ClientResult<Entry> {
-        let json: DeletedEntry = self.smart_json_q(Method::DELETE, EndPoint::Entry(id), UNIT, UNIT)?;
+        let json: DeletedEntry =
+            self.smart_json_q(Method::DELETE, EndPoint::Entry(id), UNIT, UNIT)?;
 
         // build an entry composed of the deleted entry returned and the id
         let entry = Entry {
