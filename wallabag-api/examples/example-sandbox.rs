@@ -55,5 +55,12 @@ pub fn main() {
     let res = client.get_tags();
     println!("{:#?}", res);
 
+    // let res = client.delete_tag(404);
+    let res = client.delete_tag(20382);
+    println!("{:#?}", res);
+
+    let res = client.get_tags();
+    println!("{:#?}", res);
+
 
 }

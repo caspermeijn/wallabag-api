@@ -10,8 +10,9 @@ use serde_json::{from_value, Value};
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
-    Annotation, Annotations, AuthInfo, Config, Entries, Entry, ExistsResponse, NewAnnotation,
-    NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tags, TokenInfo, User, UNIT,
+    Annotation, Annotations, AuthInfo, Config, DeletedTag, Entries, Entry, ExistsResponse,
+    NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tags, TokenInfo, Tag,
+    User, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -303,14 +304,24 @@ impl Client {
             }
         }
 
-        println!("{:#?}", entries);
-
         Ok(entries)
     }
 
     /// Get a list of all tags.
     pub fn get_tags(&mut self) -> ClientResult<Tags> {
         self.smart_json_q(Method::GET, EndPoint::Tags, UNIT, UNIT)
+    }
+
+    /// Permanently delete a tag by id. This removes the tag from all entries.
+    pub fn delete_tag(&mut self, id: u32) -> ClientResult<Tag> {
+        // api does not return id of deleted tag, hence the temporary struct
+        let dt: DeletedTag = self.smart_json_q(Method::DELETE, EndPoint::Tag(id), UNIT, UNIT)?;
+
+        Ok(Tag {
+            id,
+            label: dt.label,
+            slug: dt.slug,
+        })
     }
 
     /// Get the API version. Probably not useful because if the version isn't v2

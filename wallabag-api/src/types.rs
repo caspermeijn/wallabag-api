@@ -108,7 +108,13 @@ pub struct Tag {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct PaginatedEntries {
+pub(crate) struct DeletedTag {
+    pub label: String,
+    pub slug: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub(crate) struct PaginatedEntries {
     pub limit: u32,
     pub page: u32,
     pub pages: u32,
@@ -117,7 +123,7 @@ pub struct PaginatedEntries {
 }
 
 #[derive(Deserialize, Debug)]
-pub struct EmbeddedEntries {
+pub(crate) struct EmbeddedEntries {
     pub items: Entries,
 }
 

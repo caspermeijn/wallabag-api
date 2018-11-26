@@ -8,6 +8,7 @@ pub enum EndPoint {
     Version,
     User,
     Tags,
+    Tag(u32),
     Entry(u32),
     Annotation(u32),
 }
@@ -25,6 +26,7 @@ impl fmt::Display for EndPoint {
                 Version => "/api/version.json".to_owned(),
                 User => "/api/user.json".to_owned(),
                 Tags => "/api/tags.json".to_owned(),
+                Tag(i) => format!("/api/tags/{}.json", i),
                 Entry(i) => format!("/api/entries/{}.json", i),
                 Annotation(i) => format!("/api/annotations/{}.json", i),
             }
