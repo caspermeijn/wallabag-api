@@ -12,6 +12,12 @@ pub use self::user::{NewlyRegisteredInfo, RegisterInfo, User};
 
 pub type ID = u32;
 
+impl From<Entry> for ID {
+    fn from(entry: Entry) -> Self {
+        entry.id
+    }
+}
+
 pub type ExistsInfo = HashMap<String, Option<ID>>;
 
 /// Represents possible filters to apply to `get_entries_filtered`. To use the

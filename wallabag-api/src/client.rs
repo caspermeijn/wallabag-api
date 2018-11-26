@@ -285,8 +285,11 @@ impl Client {
     }
 
     /// Get an entry by id.
-    pub fn get_entry(&mut self, id: ID) -> ClientResult<Entry> {
-        self.smart_json_q(Method::GET, EndPoint::Entry(id), UNIT, UNIT)
+    pub fn get_entry<T>(&mut self, id: T) -> ClientResult<Entry>
+    where
+        T: Into<ID>,
+    {
+        self.smart_json_q(Method::GET, EndPoint::Entry(id.into()), UNIT, UNIT)
     }
 
     /// Delete an entry by id.
