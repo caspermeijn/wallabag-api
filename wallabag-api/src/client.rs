@@ -10,9 +10,9 @@ use serde_json::{from_value, Value};
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
-    Annotation, Annotations, AuthInfo, Config, DeletedEntry, DeletedTag, Entries, Entry,
-    ExistsResponse, NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, PatchEntry,
-    RegisterInfo, Tag, Tags, TokenInfo, User, UNIT,
+    Annotation, Annotations, AuthInfo, Config, DeletedEntry, DeletedTag, Entries, EntriesFilter,
+    Entry, ExistsResponse, NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries,
+    PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User, UNIT, _EntriesFilter,
 };
 use crate::utils::{EndPoint, Format, UrlBuilder};
 
@@ -277,9 +277,7 @@ impl Client {
 
     /// Update entry. To leave an editable field unchanged, set to `None`.
     pub fn update_entry(&mut self, id: u32, entry: &PatchEntry) -> ClientResult<Entry> {
-
-        let json: Value =
-            self.smart_json_q(Method::PATCH, EndPoint::Entry(id), UNIT, entry)?;
+        let json: Value = self.smart_json_q(Method::PATCH, EndPoint::Entry(id), UNIT, entry)?;
 
         println!("{:#?}", json);
         let entry = from_value(json)?;
@@ -289,7 +287,6 @@ impl Client {
 
     /// Reload entry.
     pub fn reload_entry(&mut self, id: u32) -> ClientResult<Entry> {
-
         let entry: Entry =
             self.smart_json_q(Method::PATCH, EndPoint::EntryReload(id), UNIT, UNIT)?;
 
@@ -396,11 +393,37 @@ impl Client {
         Err(ClientError::UnexpectedJsonStructure)
     }
 
-    /// Get all entries. TODO: filters
+    /// Get all entries.
     pub fn get_entries(&mut self) -> ClientResult<Entries> {
-        let mut params = HashMap::new();
+        self._get_entries(EntriesFilter {
+            archive: None,
+            starred: None,
+            sort: None,
+            order: None,
+            tags: None,
+            since: None,
+            public: None,
+        })
+    }
 
+    /// Get all entries, filtered by filter parameters.
+    pub fn get_entries_filtered(&mut self, filter: EntriesFilter) -> ClientResult<Entries> {
+        self._get_entries(filter)
+    }
+
+    fn _get_entries(&mut self, filter: EntriesFilter) -> ClientResult<Entries> {
         let mut entries = Entries::new();
+
+        let mut params = _EntriesFilter {
+            archive: filter.archive,
+            starred: filter.starred,
+            sort: filter.sort,
+            order: filter.order,
+            tags: filter.tags,
+            since: filter.since,
+            public: filter.public,
+            page: 1,
+        };
 
         // loop to handle pagination. No other api endpoints paginate so it's
         // fine here.
@@ -415,7 +438,7 @@ impl Client {
                 break;
             } else {
                 // otherwise next page
-                params.insert("page".to_owned(), (json.page + 1).to_string());
+                params.page = json.page + 1;
             }
         }
 
@@ -449,7 +472,12 @@ impl Client {
     /// tag not found. Idempotent. Removing a tag that exists but doesn't exist
     /// on the entry completes without error.
     pub fn delete_tag_from_entry(&mut self, entry_id: u32, tag_id: u32) -> ClientResult<Entry> {
-        self.smart_json_q(Method::DELETE, EndPoint::DeleteEntryTag(entry_id, tag_id), UNIT, UNIT)
+        self.smart_json_q(
+            Method::DELETE,
+            EndPoint::DeleteEntryTag(entry_id, tag_id),
+            UNIT,
+            UNIT,
+        )
     }
 
     /// Get a list of all tags.

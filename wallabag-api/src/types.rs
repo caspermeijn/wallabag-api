@@ -8,6 +8,50 @@ pub use self::new_entry::NewEntry;
 pub use self::patch_entry::PatchEntry;
 pub use self::user::{User, RegisterInfo, NewlyRegisteredInfo};
 
+/// Represents possible filters to apply to `get_entries_filtered`. To use the
+/// default for a filter, set the value to `None`.
+#[derive(Serialize, Debug)]
+pub struct EntriesFilter {
+
+    /// 1 or 0, all entries by default
+    pub archive: Option<u32>, // 1 or 0
+
+    /// 1 or 0, all entries by default
+    pub starred: Option<u32>, // 1 or 0
+
+    /// 'created' or 'updated', default 'created'
+    pub sort: Option<String>,
+
+    /// 'asc' or 'desc', default 'desc'
+    pub order: Option<String>, // 'asc' or 'desc'
+
+    /// "tag1,tag2"; return entries that match _all_ tags. default all entries.
+    pub tags: Option<String>, // 'tag1,tag2' should be urlencoded
+
+    /// timestamp since when you want entries updated. This would be useful when
+    /// implementing a sync method.
+    pub since: Option<u32>, // timestamp. default 0
+
+    /// 1 or 0, all entries by default. Whether or not the entries have a public
+    /// link.
+    pub public: Option<u32>, // 1 or 0
+}
+
+/// Represents possible filters to apply to get_entries.
+#[derive(Serialize, Debug)]
+pub(crate) struct _EntriesFilter {
+    pub archive: Option<u32>, // 1 or 0
+    pub starred: Option<u32>, // 1 or 0
+    pub sort: Option<String>, // 'created' or 'updated', default 'created'
+    pub order: Option<String>, // 'asc' or 'desc'
+    pub tags: Option<String>, // 'tag1,tag2' should be urlencoded
+    pub since: Option<u32>, // timestamp. default 0
+    pub public: Option<u32>, // 1 or 0
+    pub page: u32, // page number; for pagination
+}
+
+
+
 #[derive(Deserialize, Debug)]
 pub struct TokenInfo {
     pub access_token: String,
