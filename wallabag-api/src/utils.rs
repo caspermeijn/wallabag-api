@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::types::ID;
+
 #[derive(Debug, Clone, Copy)]
 pub enum Format {
     XML,
@@ -41,13 +43,13 @@ pub(crate) enum EndPoint {
     TagsLabel,
     TagLabel,
     EntriesList,
-    DeleteEntryTag(u32, u32),  // entry id, tag id
-    EntryReload(u32),
-    EntryTags(u32), // entry id
-    Export(u32, Format),
-    Tag(u32),
-    Entry(u32),
-    Annotation(u32),
+    DeleteEntryTag(ID, ID),  // entry id, tag id
+    EntryReload(ID),
+    EntryTags(ID), // entry id
+    Export(ID, Format),
+    Tag(ID),
+    Entry(ID),
+    Annotation(ID),
 }
 
 impl fmt::Display for EndPoint {

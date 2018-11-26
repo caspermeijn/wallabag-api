@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde_derive::{Deserialize, Serialize};
 
 mod new_entry;
@@ -6,13 +8,16 @@ mod user;
 
 pub use self::new_entry::NewEntry;
 pub use self::patch_entry::PatchEntry;
-pub use self::user::{User, RegisterInfo, NewlyRegisteredInfo};
+pub use self::user::{NewlyRegisteredInfo, RegisterInfo, User};
+
+pub type ID = u32;
+
+pub type ExistsInfo = HashMap<String, Option<ID>>;
 
 /// Represents possible filters to apply to `get_entries_filtered`. To use the
 /// default for a filter, set the value to `None`.
 #[derive(Serialize, Debug)]
 pub struct EntriesFilter {
-
     /// 1 or 0, all entries by default
     pub archive: Option<u32>, // 1 or 0
 
@@ -40,17 +45,15 @@ pub struct EntriesFilter {
 /// Represents possible filters to apply to get_entries.
 #[derive(Serialize, Debug)]
 pub(crate) struct _EntriesFilter {
-    pub archive: Option<u32>, // 1 or 0
-    pub starred: Option<u32>, // 1 or 0
-    pub sort: Option<String>, // 'created' or 'updated', default 'created'
+    pub archive: Option<u32>,  // 1 or 0
+    pub starred: Option<u32>,  // 1 or 0
+    pub sort: Option<String>,  // 'created' or 'updated', default 'created'
     pub order: Option<String>, // 'asc' or 'desc'
-    pub tags: Option<String>, // 'tag1,tag2' should be urlencoded
-    pub since: Option<u32>, // timestamp. default 0
-    pub public: Option<u32>, // 1 or 0
-    pub page: u32, // page number; for pagination
+    pub tags: Option<String>,  // 'tag1,tag2' should be urlencoded
+    pub since: Option<u32>,    // timestamp. default 0
+    pub public: Option<u32>,   // 1 or 0
+    pub page: u32,             // page number; for pagination
 }
-
-
 
 #[derive(Deserialize, Debug)]
 pub struct TokenInfo {
@@ -87,7 +90,7 @@ pub struct Entry {
     pub domain_name: Option<String>,
     pub headers: Option<String>, // TODO: probably not string?
     pub http_status: Option<String>,
-    pub id: u32,
+    pub id: ID,
     pub is_archived: u32, // 1 or 0 TODO: encode in enum or cast to bool
     pub is_public: bool,
     pub is_starred: u32,          // same as is_archived
@@ -105,7 +108,7 @@ pub struct Entry {
     pub updated_at: String,
     pub url: Option<String>,
     pub user_email: String,
-    pub user_id: u32,
+    pub user_id: ID,
     pub user_name: String,
 }
 
@@ -136,10 +139,9 @@ pub(crate) struct DeletedEntry {
     pub updated_at: String,
     pub url: Option<String>,
     pub user_email: String,
-    pub user_id: u32,
+    pub user_id: ID,
     pub user_name: String,
 }
-
 
 pub type Annotations = Vec<Annotation>;
 
@@ -147,7 +149,7 @@ pub type Annotations = Vec<Annotation>;
 pub struct Annotation {
     pub annotator_schema_version: String,
     pub created_at: String,
-    pub id: u32,
+    pub id: ID,
     pub quote: String,
     pub ranges: Vec<Range>,
     pub text: String,
@@ -180,7 +182,7 @@ pub type Tags = Vec<Tag>;
 
 #[derive(Deserialize, Debug)]
 pub struct Tag {
-    pub id: u32,
+    pub id: ID,
     pub label: String,
     pub slug: String,
 }
