@@ -116,8 +116,8 @@ pub fn main() {
     //     }
     // }
 
-    let res = client.reload_entry(1801932);
-    println!("{:#?}", res);
+    // let res = client.reload_entry(1801932);
+    // println!("{:#?}", res);
 
     // let res = client.get_entry(1801067);
     // match res {
@@ -129,4 +129,14 @@ pub fn main() {
     //     }
     // }
 
+    let res = client.add_tags_to_entry(
+        1801932,
+        vec![
+            "tag1".to_owned(),
+            "jktjbucjraontebjtaneteu".to_owned(),
+            "deja".to_owned(),
+            "wat,dis".to_owned(),
+        ],
+    );
+    println!("{:#?}", res);
 }

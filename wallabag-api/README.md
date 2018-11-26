@@ -41,7 +41,7 @@ Provides types and functions for interacting with a Wallabag server.
       Reload an entry.
 - [X] GET `/api/entries/{entry}/tags.{_format}`
       Retrieve all tags for an entry.
-- [ ] POST `/api/entries/{entry}/tags.{_format}`
+- [X] POST `/api/entries/{entry}/tags.{_format}`
       Add one or more tags to an entry.
 - [ ] DELETE `/api/entries/{entry}/tags/{tag}.{_format}`
       Permanently remove one tag for an entry.
