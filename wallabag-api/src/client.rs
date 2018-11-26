@@ -11,7 +11,7 @@ use serde_json::{from_value, Value};
 use crate::errors::{ClientError, ClientResult, ResponseError};
 use crate::types::{
     Annotation, Annotations, AuthInfo, Config, DeletedTag, Entries, Entry, ExistsResponse,
-    NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tag, Tags,
+    NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, RegisterInfo, Tag, Tags, DeletedEntry,
     TokenInfo, User, UNIT,
 };
 use crate::utils::{EndPoint, Format, UrlBuilder};
@@ -111,7 +111,6 @@ impl Client {
     {
         Ok(self.smart_q(method, end_point, query, json)?.text()?)
     }
-
 
     /// Smartly run a request that expects to receive json back. Handles adding
     /// authorization headers, and retry on expired token.
@@ -280,6 +279,43 @@ impl Client {
         Ok(entry)
     }
 
+    /// Delete an entry by id.
+    pub fn delete_entry(&mut self, id: u32) -> ClientResult<Entry> {
+        let json: DeletedEntry = self.smart_json_q(Method::DELETE, EndPoint::Entry(id), UNIT, UNIT)?;
+
+        // build an entry composed of the deleted entry returned and the id
+        let entry = Entry {
+            id,
+            annotations: json.annotations,
+            content: json.content,
+            created_at: json.created_at,
+            domain_name: json.domain_name,
+            headers: json.headers,
+            http_status: json.http_status,
+            is_archived: json.is_archived,
+            is_public: json.is_public,
+            is_starred: json.is_starred,
+            language: json.language,
+            mimetype: json.mimetype,
+            origin_url: json.origin_url,
+            preview_picture: json.preview_picture,
+            published_at: json.published_at,
+            published_by: json.published_by,
+            reading_time: json.reading_time,
+            starred_at: json.starred_at,
+            tags: json.tags,
+            title: json.title,
+            uid: json.uid,
+            updated_at: json.updated_at,
+            url: json.url,
+            user_email: json.user_email,
+            user_id: json.user_id,
+            user_name: json.user_name,
+        };
+
+        Ok(entry)
+    }
+
     /// Update an annotation.
     pub fn update_annotation(&mut self, annotation: &Annotation) -> ClientResult<Annotation> {
         let json: Annotation = self.smart_json_q(
@@ -368,7 +404,6 @@ impl Client {
     pub fn get_tags_for_entry(&mut self, entry_id: u32) -> ClientResult<Tags> {
         self.smart_json_q(Method::GET, EndPoint::EntryTags(entry_id), UNIT, UNIT)
     }
-
 
     /// Get a list of all tags.
     pub fn get_tags(&mut self) -> ClientResult<Tags> {

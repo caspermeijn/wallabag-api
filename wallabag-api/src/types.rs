@@ -63,6 +63,38 @@ pub struct Entry {
     pub user_name: String,
 }
 
+/// A struct representing an entry from wallabag (a full saved article including
+/// annotations and tags).
+#[derive(Deserialize, Debug)]
+pub(crate) struct DeletedEntry {
+    pub annotations: Option<Annotations>,
+    pub content: Option<String>,
+    pub created_at: String,
+    pub domain_name: Option<String>,
+    pub headers: Option<String>, // TODO: probably not string?
+    pub http_status: Option<String>,
+    pub is_archived: u32, // 1 or 0 TODO: encode in enum or cast to bool
+    pub is_public: bool,
+    pub is_starred: u32,          // same as is_archived
+    pub language: Option<String>, // TODO: probably not string
+    pub mimetype: Option<String>,
+    pub origin_url: Option<String>,
+    pub preview_picture: Option<String>,
+    pub published_at: Option<String>,
+    pub published_by: Option<String>,
+    pub reading_time: u32,
+    pub starred_at: Option<String>,
+    pub tags: Tags,
+    pub title: Option<String>,
+    pub uid: Option<String>,
+    pub updated_at: String,
+    pub url: Option<String>,
+    pub user_email: String,
+    pub user_id: u32,
+    pub user_name: String,
+}
+
+
 pub type Annotations = Vec<Annotation>;
 
 #[derive(Deserialize, Serialize, Debug)]

@@ -29,7 +29,7 @@ Provides types and functions for interacting with a Wallabag server.
       Handles an entries list delete tags from them.
 - [ ] POST `/api/entries/tags/lists.{_format}`
       Handles an entries list and add tags to them.
-- [ ] DELETE `/api/entries/{entry}.{_format}`
+- [X] DELETE `/api/entries/{entry}.{_format}`
       Delete permanently an entry.
 - [X] GET `/api/entries/{entry}.{_format}`
       Retrieve a single entry.

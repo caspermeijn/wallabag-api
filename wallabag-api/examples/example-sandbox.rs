@@ -52,7 +52,6 @@ pub fn main() {
     // });
     // println!("{:#?}", res);
 
-
     // let res = client.get_tags();
     // println!("{:#?}", res);
 
@@ -75,8 +74,9 @@ pub fn main() {
     // let res = client.export_entry(1800725, Format::XML);
     // println!("{:#?}", res);
 
-    let res = client.get_tags_for_entry(1800725);
+    // let res = client.get_tags_for_entry(1800725);
+    // println!("{:#?}", res);
+
+    let res = client.delete_entry(1801020);
     println!("{:#?}", res);
-
-
 }
