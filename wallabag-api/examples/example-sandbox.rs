@@ -62,7 +62,10 @@ pub fn main() {
     let res = client.get_tags();
     println!("{:#?}", res);
 
-    let res = client.delete_tags_by_label(vec!["tag1".to_owned(), "tag2".to_owned()]);
+    // let res = client.delete_tags_by_label(vec!["tag1".to_owned(), "tag2".to_owned()]);
+    // println!("{:#?}", res);
+
+    let res = client.delete_tag_by_label("test".to_owned());
     println!("{:#?}", res);
 
     let res = client.get_tags();

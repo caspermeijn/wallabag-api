@@ -328,6 +328,19 @@ impl Client {
         })
     }
 
+    /// Permanently delete a tag by label (tag names). This also exhibits the
+    /// privacy breaching behaviour of returning tag info of other users' tags.
+    /// Also, labels aren't necessarily unique across a wallabag installation.
+    /// The server should filter by tags belonging to a user in the same db
+    /// query.
+    pub fn delete_tag_by_label(&mut self, label: String) -> ClientResult<DeletedTag> {
+        let mut params = HashMap::new();
+        params.insert("tag".to_owned(), label);
+
+        let deleted_tag: DeletedTag = self.smart_json_q(Method::DELETE, EndPoint::TagLabel, &params, UNIT)?;
+        Ok(deleted_tag)
+    }
+
     /// Permanently batch delete tags by labels (tag names). Returns not found
     /// if _all_ labels not found. If at least one found, then returns ok. For
     /// some reason, (at least the framabag instance) the server returns success
