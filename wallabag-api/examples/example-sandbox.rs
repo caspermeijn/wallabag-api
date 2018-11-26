@@ -20,12 +20,14 @@ pub fn main() {
 
     let mut client = Client::new(config);
 
-    // let res = api.get_entry(1798248);
+    // let res = client.get_entry(1798309);
+    // println!("{:#?}", res);
+
     // let res = client.get_entries();
     // println!("{:#?}", res);
 
-    // let res = client.delete_annotation(2);
-    // println!("{:#?}", res);
+    let res = client.delete_annotation(2);
+    println!("{:#?}", res);
 
     // let res = client.delete_annotation(904);
     // println!("{:#?}", res);
@@ -140,9 +142,9 @@ pub fn main() {
     // );
     // println!("{:#?}", res);
 
-    let res = client.delete_tag_from_entry(
-        1801932,
-        20398,
-    );
-    println!("{:#?}", res);
+    // let res = client.delete_tag_from_entry(
+    //     1801932,
+    //     20398,
+    // );
+    // println!("{:#?}", res);
 }

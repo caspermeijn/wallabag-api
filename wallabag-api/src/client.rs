@@ -8,11 +8,11 @@ use serde::ser::Serialize;
 use serde_json::{from_value, Value};
 
 // local imports
-use crate::errors::{ClientError, ClientResult, ResponseError};
+use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, ResponseError};
 use crate::types::{
     Annotation, Annotations, AuthInfo, Config, DeletedEntry, DeletedTag, Entries, EntriesFilter,
     Entry, ExistsResponse, NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries,
-    PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User, UNIT, _EntriesFilter,
+    PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User, _EntriesFilter, UNIT,
 };
 use crate::utils::{EndPoint, Format, UrlBuilder};
 
@@ -145,14 +145,11 @@ impl Client {
         let response_result = self.q(method.clone(), end_point, query, json, true);
 
         match response_result {
-            Err(ClientError::Unauthorized(ref err)) => {
-                if err.error_description.as_str().contains("expired") {
-                    // let's just try refreshing the token
-                    self.refresh_token()?;
+            Err(ClientError::ExpiredToken) => {
+                self.refresh_token()?;
 
-                    // try the request again now
-                    return Ok(self.q(method, end_point, query, json, true)?);
-                }
+                // try the request again now
+                return Ok(self.q(method, end_point, query, json, true)?);
             }
             _ => (),
         }
@@ -204,10 +201,6 @@ impl Client {
 
         let mut response = request.send()?;
 
-        println!("response status: {:#?}", response.status());
-
-        // main error handling here
-        // TODO: handle more cases
         match response.status() {
             StatusCode::UNAUTHORIZED => {
                 let info: ResponseError = response.json()?;
@@ -217,19 +210,25 @@ impl Client {
                     return Err(ClientError::Unauthorized(info));
                 }
             }
+            StatusCode::FORBIDDEN => {
+                let info: ResponseCodeMessageError = response.json()?;
+                return Err(ClientError::Forbidden(info));
+            }
             StatusCode::NOT_FOUND => {
-                println!("{:#?}", response.text());
-                return Err(ClientError::NotFound);
+                let info: ResponseCodeMessageError = response.json()?;
+                return Err(ClientError::NotFound(info));
             }
             StatusCode::NOT_MODIFIED => {
-                return Err(ClientError::NotModified); // reload entry returns this if no changes on re-crawl url or if failed to reload
+                // reload entry returns this if no changes on re-crawl url or if failed to reload
+                return Err(ClientError::NotModified);
             }
-            _ => (),
-            // TODO: try to parse json error message on error status
+            status if status.is_success() => Ok(response),
+            status => {
+                println!("unhandled response status: {:#?}", status);
+                // TODO: try to parse json error message on error status
+                unimplemented!();
+            }
         }
-
-        // TODO: don't error for status
-        Ok(response.error_for_status()?)
     }
 
     /// Check if a list of urls already have entries. This is more efficient if
@@ -295,11 +294,7 @@ impl Client {
 
     /// Get an entry by id.
     pub fn get_entry(&mut self, id: u32) -> ClientResult<Entry> {
-        let json: Value = self.smart_json_q(Method::GET, EndPoint::Entry(id), UNIT, UNIT)?;
-
-        let entry = from_value(json)?;
-
-        Ok(entry)
+        self.smart_json_q(Method::GET, EndPoint::Entry(id), UNIT, UNIT)
     }
 
     /// Delete an entry by id.
@@ -430,7 +425,6 @@ impl Client {
         loop {
             let json: PaginatedEntries =
                 self.smart_json_q(Method::GET, EndPoint::Entries, &params, UNIT)?;
-            println!("{}", json.page);
 
             entries.extend(json._embedded.items.into_iter());
 

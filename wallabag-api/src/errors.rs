@@ -9,14 +9,27 @@ pub struct ResponseError {
     pub error_description: String,
 }
 
+/// Type for the json error data returned on forbidden error from http api
+#[derive(Deserialize, Debug)]
+pub struct ResponseCodeMessageError {
+    pub error: CodeMessage,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct CodeMessage {
+    pub code: u32,
+    pub message: String,
+}
+
 #[derive(Debug)]
 pub enum ClientError {
     ReqwestError(reqwest::Error),
     SerdeJsonError(serde_json::error::Error),
     Unauthorized(ResponseError),
+    Forbidden(ResponseCodeMessageError),
     ExpiredToken,
     UnexpectedJsonStructure, // eg returned valid json but didn't fit model
-    NotFound,  // 404
+    NotFound(ResponseCodeMessageError),  // 404
     NotModified,  // 304
 }
 
