@@ -193,6 +193,12 @@ pub struct Tag {
     pub slug: String,
 }
 
+impl From<Tag> for ID {
+    fn from(tag: Tag) -> Self {
+        tag.id
+    }
+}
+
 #[derive(Deserialize, Debug)]
 pub struct DeletedTag {
     pub label: String,

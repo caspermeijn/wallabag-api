@@ -267,8 +267,8 @@ impl Client {
     }
 
     /// Update entry. To leave an editable field unchanged, set to `None`.
-    pub fn update_entry(&mut self, id: ID, entry: &PatchEntry) -> ClientResult<Entry> {
-        let json: Value = self.smart_json_q(Method::PATCH, EndPoint::Entry(id), UNIT, entry)?;
+    pub fn update_entry<T: Into<ID>>(&mut self, id: T, entry: &PatchEntry) -> ClientResult<Entry> {
+        let json: Value = self.smart_json_q(Method::PATCH, EndPoint::Entry(id.into()), UNIT, entry)?;
 
         println!("{:#?}", json);
         let entry = from_value(json)?;
@@ -277,24 +277,23 @@ impl Client {
     }
 
     /// Reload entry.
-    pub fn reload_entry(&mut self, id: ID) -> ClientResult<Entry> {
+    pub fn reload_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
         let entry: Entry =
-            self.smart_json_q(Method::PATCH, EndPoint::EntryReload(id), UNIT, UNIT)?;
+            self.smart_json_q(Method::PATCH, EndPoint::EntryReload(id.into()), UNIT, UNIT)?;
 
         Ok(entry)
     }
 
     /// Get an entry by id.
-    pub fn get_entry<T>(&mut self, id: T) -> ClientResult<Entry>
-    where
-        T: Into<ID>,
+    pub fn get_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry>
     {
         self.smart_json_q(Method::GET, EndPoint::Entry(id.into()), UNIT, UNIT)
     }
 
     /// Delete an entry by id.
     /// TODO: allow passing a u32 id or an Entry interchangably
-    pub fn delete_entry(&mut self, id: ID) -> ClientResult<Entry> {
+    pub fn delete_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
+        let id = id.into();
         let json: DeletedEntry =
             self.smart_json_q(Method::DELETE, EndPoint::Entry(id), UNIT, UNIT)?;
 
@@ -344,14 +343,14 @@ impl Client {
     }
 
     /// Create a new annotation on an entry.
-    pub fn create_annotation(
+    pub fn create_annotation<T: Into<ID>>(
         &mut self,
-        entry_id: ID,
+        entry_id: T,
         annotation: NewAnnotation,
     ) -> ClientResult<Annotation> {
         let json: Annotation = self.smart_json_q(
             Method::POST,
-            EndPoint::Annotation(entry_id),
+            EndPoint::Annotation(entry_id.into()),
             UNIT,
             &annotation,
         )?;
@@ -360,16 +359,16 @@ impl Client {
     }
 
     /// Delete an annotation by id
-    pub fn delete_annotation(&mut self, id: ID) -> ClientResult<Annotation> {
+    pub fn delete_annotation<T: Into<ID>>(&mut self, id: T) -> ClientResult<Annotation> {
         let json: Annotation =
-            self.smart_json_q(Method::DELETE, EndPoint::Annotation(id), UNIT, UNIT)?;
+            self.smart_json_q(Method::DELETE, EndPoint::Annotation(id.into()), UNIT, UNIT)?;
 
         Ok(json)
     }
 
     /// Get all annotations for an entry (by id).
-    pub fn get_annotations(&mut self, id: ID) -> ClientResult<Annotations> {
-        let json: Value = self.smart_json_q(Method::GET, EndPoint::Annotation(id), UNIT, UNIT)?;
+    pub fn get_annotations<T: Into<ID>>(&mut self, id: T) -> ClientResult<Annotations> {
+        let json: Value = self.smart_json_q(Method::GET, EndPoint::Annotation(id.into()), UNIT, UNIT)?;
 
         // extract the embedded annotations vec from the Value
         match json {
@@ -435,14 +434,14 @@ impl Client {
     }
 
     /// Get an export of an entry in a particular format.
-    pub fn export_entry(&mut self, entry_id: ID, fmt: Format) -> ClientResult<String> {
-        let data = self.smart_text_q(Method::GET, EndPoint::Export(entry_id, fmt), UNIT, UNIT)?;
+    pub fn export_entry<T: Into<ID>>(&mut self, entry_id: T, fmt: Format) -> ClientResult<String> {
+        let data = self.smart_text_q(Method::GET, EndPoint::Export(entry_id.into(), fmt), UNIT, UNIT)?;
         Ok(data)
     }
 
     /// Get a list of all tags for an entry by entry id.
-    pub fn get_tags_for_entry(&mut self, entry_id: ID) -> ClientResult<Tags> {
-        self.smart_json_q(Method::GET, EndPoint::EntryTags(entry_id), UNIT, UNIT)
+    pub fn get_tags_for_entry<T: Into<ID>>(&mut self, entry_id: T) -> ClientResult<Tags> {
+        self.smart_json_q(Method::GET, EndPoint::EntryTags(entry_id.into()), UNIT, UNIT)
     }
 
     /// Add tags to an entry by entry id. Idempotent operation. No problems if
@@ -450,7 +449,7 @@ impl Client {
     /// TODO: use types to restrict chars in tags; if a tag contains a comma,
     /// then it will be saved as two tags (eg. 'wat,dis' becomes 'wat' and 'dis'
     /// tags on the server.
-    pub fn add_tags_to_entry(&mut self, entry_id: ID, tags: Vec<String>) -> ClientResult<Entry> {
+    pub fn add_tags_to_entry<T: Into<ID>>(&mut self, entry_id: ID, tags: Vec<String>) -> ClientResult<Entry> {
         let mut data = HashMap::new();
         data.insert("tags".to_owned(), tags.join(","));
 
@@ -460,10 +459,10 @@ impl Client {
     /// Delete a tag (by id) from an entry (by id). Returns err 404 if entry or
     /// tag not found. Idempotent. Removing a tag that exists but doesn't exist
     /// on the entry completes without error.
-    pub fn delete_tag_from_entry(&mut self, entry_id: ID, tag_id: ID) -> ClientResult<Entry> {
+    pub fn delete_tag_from_entry<T: Into<ID>, U: Into<ID>>(&mut self, entry_id: T, tag_id: U) -> ClientResult<Entry> {
         self.smart_json_q(
             Method::DELETE,
-            EndPoint::DeleteEntryTag(entry_id, tag_id),
+            EndPoint::DeleteEntryTag(entry_id.into(), tag_id.into()),
             UNIT,
             UNIT,
         )
@@ -478,7 +477,9 @@ impl Client {
     /// Appears to return success if attempting to delete a tag by id that
     /// exists on the server but isn't accessible to the user. TODO: log
     /// security ticket.
-    pub fn delete_tag(&mut self, id: ID) -> ClientResult<Tag> {
+    pub fn delete_tag<T: Into<ID>>(&mut self, id: T) -> ClientResult<Tag> {
+        let id = id.into();
+
         // api does not return id of deleted tag, hence the temporary struct
         let dt: DeletedTag = self.smart_json_q(Method::DELETE, EndPoint::Tag(id), UNIT, UNIT)?;
 
