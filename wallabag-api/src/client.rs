@@ -205,28 +205,26 @@ impl Client {
             StatusCode::UNAUTHORIZED => {
                 let info: ResponseError = response.json()?;
                 if info.error_description.as_str().contains("expired") {
-                    return Err(ClientError::ExpiredToken);
+                    Err(ClientError::ExpiredToken)
                 } else {
-                    return Err(ClientError::Unauthorized(info));
+                    Err(ClientError::Unauthorized(info))
                 }
             }
             StatusCode::FORBIDDEN => {
                 let info: ResponseCodeMessageError = response.json()?;
-                return Err(ClientError::Forbidden(info));
+                Err(ClientError::Forbidden(info))
             }
             StatusCode::NOT_FOUND => {
                 let info: ResponseCodeMessageError = response.json()?;
-                return Err(ClientError::NotFound(info));
+                Err(ClientError::NotFound(info))
             }
             StatusCode::NOT_MODIFIED => {
                 // reload entry returns this if no changes on re-crawl url or if failed to reload
-                return Err(ClientError::NotModified);
+                Err(ClientError::NotModified)
             }
             status if status.is_success() => Ok(response),
             status => {
-                println!("unhandled response status: {:#?}", status);
-                // TODO: try to parse json error message on error status
-                unimplemented!();
+                Err(ClientError::Other(status, response.text()?))
             }
         }
     }

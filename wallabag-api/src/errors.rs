@@ -1,4 +1,5 @@
 use serde_derive::Deserialize;
+use reqwest::StatusCode;
 
 pub type ClientResult<T> = std::result::Result<T, ClientError>;
 
@@ -31,6 +32,7 @@ pub enum ClientError {
     UnexpectedJsonStructure, // eg returned valid json but didn't fit model
     NotFound(ResponseCodeMessageError),  // 404
     NotModified,  // 304
+    Other(StatusCode, String), // ¯\_(ツ)_/¯
 }
 
 // TODO: extract reqwest errors and turn them into more useful ClientErrors
