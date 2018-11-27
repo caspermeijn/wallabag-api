@@ -189,4 +189,8 @@ pub fn main() {
     //     20398,
     // );
     // println!("{:#?}", res);
+
+    let res = client.get_user();
+    println!("{:#?}", res);
+
 }

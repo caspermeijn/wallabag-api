@@ -1,13 +1,16 @@
+use chrono::{DateTime, Utc};
 use serde_derive::{Deserialize, Serialize};
+
+use crate::types::ID;
 
 /// A struct representing a user.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct User {
-    pub id: u32,
+    pub id: ID,
     pub username: String,
     pub email: String,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 /// A struct representing a user to be registered. Includes the name for the
@@ -23,11 +26,11 @@ pub struct RegisterInfo {
 /// A struct representing a newly created user and associated client info.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct NewlyRegisteredInfo {
-    pub id: u32,
+    pub id: ID,
     pub username: String,
     pub email: String,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
     pub default_client: ClientInfo,
 }
 

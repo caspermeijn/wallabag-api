@@ -25,6 +25,7 @@ pub fn main() -> Result<(), ()> {
 
     let mut entry = NewEntry::new_with_url(url);
     entry.tags = Some(vec!["wat,hing".to_owned(), "console".to_owned()]);
+    entry.archive = Some(true);
 
     let res = client.create_entry(&entry);
 

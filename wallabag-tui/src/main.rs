@@ -1,5 +1,5 @@
-mod event;
 mod backend;
+mod event;
 
 use std::env;
 use std::fs::File;
@@ -18,7 +18,7 @@ use tui::style::{Color, Modifier, Style};
 use tui::widgets::{Block, Borders, List, SelectableList, Text, Widget};
 use tui::Terminal;
 
-use wallabag_api::types::{AuthInfo, Config};
+use wallabag_api::types::Config;
 use wallabag_api::Client;
 
 use crate::event::{Event, Events};
@@ -36,17 +36,13 @@ struct App {
 impl App {
     fn new() -> App {
         let config = Config {
-            auth_info: AuthInfo {
-                client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
-                client_secret: env::var("WALLABAG_CLIENT_SECRET")
-                    .expect("WALLABAG_CLIENT_SECRET not set"),
-                username: env::var("WALLABAG_USERNAME").expect("WALLABAG_USERNAME not set"),
-                password: env::var("WALLABAG_PASSWORD").expect("WALLABAG_PASSWORD not set"),
-            },
+            client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
+            client_secret: env::var("WALLABAG_CLIENT_SECRET")
+                .expect("WALLABAG_CLIENT_SECRET not set"),
+            username: env::var("WALLABAG_USERNAME").expect("WALLABAG_USERNAME not set"),
+            password: env::var("WALLABAG_PASSWORD").expect("WALLABAG_PASSWORD not set"),
             base_url: "https://framabag.org".to_owned(),
         };
-
-        debug!("{:#?}", config);
 
         let mut client = Client::new(config);
         App {
@@ -62,7 +58,6 @@ impl App {
 }
 
 fn main() -> Result<(), failure::Error> {
-
     // init logging
     WriteLogger::init(
         simplelog::LevelFilter::Debug,

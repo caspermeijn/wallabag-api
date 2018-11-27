@@ -1,3 +1,5 @@
+pub(crate) mod serde;
+
 use std::fmt;
 
 use crate::types::ID;

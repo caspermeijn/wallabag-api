@@ -42,9 +42,9 @@ pub struct EntriesFilter {
     #[serde(serialize_with = "vec_to_str")]
     pub tags: Vec<String>,
 
-    /// timestamp since when you want entries updated. This would be useful when
-    /// implementing a sync method. Default is 0 (ie entries from the beginning
-    /// of epoch).
+    /// timestamp (in seconds) since when you want entries updated. This would
+    /// be useful when implementing a sync method. Default is 0 (ie entries from
+    /// the beginning of epoch).
     pub since: u32,
 
     /// None = all entries; true/false = entries which do or do not have a public link
