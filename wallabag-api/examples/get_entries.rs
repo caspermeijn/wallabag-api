@@ -1,6 +1,6 @@
 use std::env;
 
-use wallabag_api::types::{AuthInfo, Config, EntriesFilter};
+use wallabag_api::types::{AuthInfo, Config, EntriesFilter, SortOrder};
 use wallabag_api::utils::Format;
 use wallabag_api::Client;
 
@@ -20,15 +20,9 @@ pub fn main() {
 
     let mut client = Client::new(config);
 
-    let filter = EntriesFilter {
-        archive: None,
-        starred: Some(1),
-        sort: None,
-        order: None,
-        tags: None,
-        since: None,
-        public: None,
-    };
+    let mut filter = EntriesFilter::default();
+    // edit filter options here
+    filter.order = SortOrder::Asc;
 
     let res = client.get_entries_filtered(filter);
     println!("{:#?}", res);

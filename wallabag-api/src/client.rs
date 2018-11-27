@@ -12,7 +12,7 @@ use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, Respons
 use crate::types::{
     Annotation, Annotations, AuthInfo, Config, DeletedEntry, DeletedTag, Entries, EntriesFilter,
     Entry, ExistsInfo, ExistsResponse, NewAnnotation, NewEntry, NewlyRegisteredInfo,
-    PaginatedEntries, PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User, _EntriesFilter, ID,
+    PaginatedEntries, PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User, ID,
     UNIT,
 };
 use crate::utils::{EndPoint, Format, UrlBuilder};
@@ -384,15 +384,7 @@ impl Client {
 
     /// Get all entries.
     pub fn get_entries(&mut self) -> ClientResult<Entries> {
-        self._get_entries(EntriesFilter {
-            archive: None,
-            starred: None,
-            sort: None,
-            order: None,
-            tags: None,
-            since: None,
-            public: None,
-        })
+        self._get_entries(EntriesFilter::default())
     }
 
     /// Get all entries, filtered by filter parameters.
@@ -403,22 +395,18 @@ impl Client {
     fn _get_entries(&mut self, filter: EntriesFilter) -> ClientResult<Entries> {
         let mut entries = Entries::new();
 
-        let mut params = _EntriesFilter {
-            archive: filter.archive,
-            starred: filter.starred,
-            sort: filter.sort,
-            order: filter.order,
-            tags: filter.tags,
-            since: filter.since,
-            public: filter.public,
-            page: 1,
-        };
+        let mut filter = filter.clone();
+        filter.page = 1; // just to make sure
 
         // loop to handle pagination. No other api endpoints paginate so it's
         // fine here.
         loop {
-            let json: PaginatedEntries =
-                self.smart_json_q(Method::GET, EndPoint::Entries, &params, UNIT)?;
+            let json: Value =
+                self.smart_json_q(Method::GET, EndPoint::Entries, &filter, UNIT)?;
+
+            println!("{:#?}", json);
+            let json: PaginatedEntries = from_value(json)?;
+            // unimplemented!();
 
             entries.extend(json._embedded.items.into_iter());
 
@@ -426,7 +414,7 @@ impl Client {
                 break;
             } else {
                 // otherwise next page
-                params.page = json.page + 1;
+                filter.page = json.page + 1;
             }
         }
 

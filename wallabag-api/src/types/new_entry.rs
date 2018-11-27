@@ -4,15 +4,12 @@ use serde_derive::{Deserialize, Serialize};
 /// At least `url` must be provided. If you wish to provide the HTML content you
 /// must also provide `content` and `title` to prevent the wallabag server from
 /// fetching it from the url.
-///
-/// TODO: document either fields
 #[derive(Deserialize, Serialize, Debug)]
 pub struct NewEntry {
     pub url: String,
     pub title: Option<String>,
 
-    /// "tag1,tag2,tag3"
-    pub tags: Option<String>, // format: "tag1,tag2,tag3" TODO: method to convert Tags to this
+    pub tags: Option<Vec<String>>,
 
     // TODO: research serde auto serialize 0/1 values into bool and viceverse
     pub archive: Option<u32>, // 0 or 1
@@ -23,7 +20,7 @@ pub struct NewEntry {
     pub published_at: Option<String>, // datetime|integer as YYYY-MM-DDTHH:II:SS+TZ or a timestamp
     pub authors: Option<String>,      // format: "name 1,name2"
     pub public: Option<u32>,          // 0 or 1
-    pub origin_url: Option<String>,   // not sure how this differs from url?
+    pub origin_url: Option<String>,   // TODO: not sure how this differs from url?
 }
 
 impl NewEntry {

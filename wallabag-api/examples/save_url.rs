@@ -26,7 +26,10 @@ pub fn main() -> Result<(), ()> {
         ()
     })?;
 
-    let res = client.create_entry(&NewEntry::new_with_url(url));
+    let mut entry = NewEntry::new_with_url(url);
+    entry.tags = Some(vec!["wat,hing".to_owned(), "console".to_owned()]);
+
+    let res = client.create_entry(&entry);
 
     match res {
         Err(e) => {

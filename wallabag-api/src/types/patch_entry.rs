@@ -7,8 +7,8 @@ use serde_derive::{Deserialize, Serialize};
 pub struct PatchEntry {
     pub title: Option<String>,
 
-    /// "tag1,tag2,tag3"
-    pub tags: Option<String>, // format: "tag1,tag2,tag3" TODO: method to convert Tags to this
+    // TODO: Into so that can pass a Tag struct or a string
+    pub tags: Option<Vec<String>>,
 
     // TODO: research serde auto serialize 0/1 values into bool and viceverse
     pub archive: Option<u32>, // 0 or 1

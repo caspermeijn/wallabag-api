@@ -1,4 +1,5 @@
 mod event;
+mod backend;
 
 use std::env;
 use std::fs::File;
@@ -109,8 +110,7 @@ fn main() -> Result<(), failure::Error> {
                 .items(&items)
                 .select(app.selected)
                 .style(style)
-                .highlight_style(style.fg(Color::LightGreen).modifier(Modifier::Bold))
-                .highlight_symbol(">")
+                .highlight_style(style.bg(Color::LightGreen).modifier(Modifier::Bold))
                 .render(&mut f, chunks[0]);
         })?;
 

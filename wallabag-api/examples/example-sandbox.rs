@@ -22,50 +22,50 @@ pub fn main() {
 
     let mut client = Client::new(config);
 
-    let res = client.get_entry(1801067u32);
-    println!("{:#?}", res);
+    // let res = client.get_entry(1801067u32);
+    // println!("{:#?}", res);
 
-    let entry = Entry {
-        annotations: None,
-        content: None,
-        created_at: "2018-11-24T10:09:43+0100".to_owned(),
-        domain_name: Some(
-            "example.com".to_owned()
-        ),
-        headers: None,
-        http_status: Some(
-            "200".to_owned()
-        ),
-        id: 1801067,
-        is_archived: 0,
-        is_public: false,
-        is_starred: 0,
-        language: None,
-        mimetype: Some(
-            "text/html".to_owned()
-        ),
-        origin_url: None,
-        preview_picture: None,
-        published_at: None,
-        published_by: None,
-        reading_time: 0,
-        starred_at: None,
-        tags: vec![],
-        title: Some(
-            "Example Domain".to_owned()
-        ),
-        uid: None,
-        updated_at: "2018-11-26T05:17:24+0100".to_owned(),
-        url: Some(
-            "https://example.com/".to_owned()
-        ),
-        user_email: "".to_owned(),
-        user_id: 1,
-        user_name: "".to_owned()
-    };
+    // let entry = Entry {
+    //     annotations: None,
+    //     content: None,
+    //     created_at: "2018-11-24T10:09:43+0100".to_owned(),
+    //     domain_name: Some(
+    //         "example.com".to_owned()
+    //     ),
+    //     headers: None,
+    //     http_status: Some(
+    //         "200".to_owned()
+    //     ),
+    //     id: 1801067,
+    //     is_archived: 0,
+    //     is_public: false,
+    //     is_starred: 0,
+    //     language: None,
+    //     mimetype: Some(
+    //         "text/html".to_owned()
+    //     ),
+    //     origin_url: None,
+    //     preview_picture: None,
+    //     published_at: None,
+    //     published_by: None,
+    //     reading_time: 0,
+    //     starred_at: None,
+    //     tags: vec![],
+    //     title: Some(
+    //         "Example Domain".to_owned()
+    //     ),
+    //     uid: None,
+    //     updated_at: "2018-11-26T05:17:24+0100".to_owned(),
+    //     url: Some(
+    //         "https://example.com/".to_owned()
+    //     ),
+    //     user_email: "".to_owned(),
+    //     user_id: 1,
+    //     user_name: "".to_owned()
+    // };
 
-    let res = client.get_entry(entry);
-    println!("{:#?}", res);
+    // let res = client.get_entry(entry);
+    // println!("{:#?}", res);
 
 
     // let res = client.get_entries();
@@ -88,8 +88,8 @@ pub fn main() {
     // let res = client.update_annotation(&annotation);
     // println!("{:#?}", res);
 
-    // let res = client.get_api_version();
-    // println!("{:#?}", res);
+    let res = client.get_api_version();
+    println!("{:#?}", res);
 
     // let res = client.register_user(&RegisterInfo {
     //     username: "placeholder".to_owned(),

@@ -1,14 +1,18 @@
 use std::collections::HashMap;
 
+use serde::de::Error as DeError;
+use serde::{Deserialize, Deserializer};
 use serde_derive::{Deserialize, Serialize};
 
 mod new_entry;
 mod patch_entry;
 mod user;
+mod entries_filter;
 
 pub use self::new_entry::NewEntry;
 pub use self::patch_entry::PatchEntry;
 pub use self::user::{NewlyRegisteredInfo, RegisterInfo, User};
+pub use self::entries_filter::{EntriesFilter, SortOrder, SortBy};
 
 pub type ID = u32;
 
@@ -20,46 +24,6 @@ impl From<Entry> for ID {
 
 pub type ExistsInfo = HashMap<String, Option<ID>>;
 
-/// Represents possible filters to apply to `get_entries_filtered`. To use the
-/// default for a filter, set the value to `None`.
-#[derive(Serialize, Debug)]
-pub struct EntriesFilter {
-    /// 1 or 0, all entries by default
-    pub archive: Option<u32>, // 1 or 0
-
-    /// 1 or 0, all entries by default
-    pub starred: Option<u32>, // 1 or 0
-
-    /// 'created' or 'updated', default 'created'
-    pub sort: Option<String>,
-
-    /// 'asc' or 'desc', default 'desc'
-    pub order: Option<String>, // 'asc' or 'desc'
-
-    /// "tag1,tag2"; return entries that match _all_ tags. default all entries.
-    pub tags: Option<String>, // 'tag1,tag2' should be urlencoded
-
-    /// timestamp since when you want entries updated. This would be useful when
-    /// implementing a sync method.
-    pub since: Option<u32>, // timestamp. default 0
-
-    /// 1 or 0, all entries by default. Whether or not the entries have a public
-    /// link.
-    pub public: Option<u32>, // 1 or 0
-}
-
-/// Represents possible filters to apply to get_entries.
-#[derive(Serialize, Debug)]
-pub(crate) struct _EntriesFilter {
-    pub archive: Option<u32>,  // 1 or 0
-    pub starred: Option<u32>,  // 1 or 0
-    pub sort: Option<String>,  // 'created' or 'updated', default 'created'
-    pub order: Option<String>, // 'asc' or 'desc'
-    pub tags: Option<String>,  // 'tag1,tag2' should be urlencoded
-    pub since: Option<u32>,    // timestamp. default 0
-    pub public: Option<u32>,   // 1 or 0
-    pub page: u32,             // page number; for pagination
-}
 
 #[derive(Deserialize, Debug)]
 pub struct TokenInfo {
@@ -86,6 +50,23 @@ pub struct Config {
 
 pub type Entries = Vec<Entry>;
 
+/// Parser for converting pseudo-bool values from 0 or 1 integers to actual bool.
+fn parse_intbool<'de, D>(d: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let x = u32::deserialize(d)?;
+
+    match x {
+        0 => Ok(false),
+        1 => Ok(true),
+        x => Err(DeError::custom(format!(
+            "Could not deserialize {} as bool",
+            x
+        ))),
+    }
+}
+
 /// A struct representing an entry from wallabag (a full saved article including
 /// annotations and tags).
 #[derive(Deserialize, Debug)]
@@ -97,9 +78,13 @@ pub struct Entry {
     pub headers: Option<String>, // TODO: probably not string?
     pub http_status: Option<String>,
     pub id: ID,
-    pub is_archived: u32, // 1 or 0 TODO: encode in enum or cast to bool
+
+    #[serde(deserialize_with = "parse_intbool")]
+    pub is_archived: bool,
     pub is_public: bool,
-    pub is_starred: u32,          // same as is_archived
+
+    #[serde(deserialize_with = "parse_intbool")]
+    pub is_starred: bool,
     pub language: Option<String>, // TODO: probably not string
     pub mimetype: Option<String>,
     pub origin_url: Option<String>,
@@ -126,12 +111,16 @@ pub(crate) struct DeletedEntry {
     pub content: Option<String>,
     pub created_at: String,
     pub domain_name: Option<String>,
-    pub headers: Option<String>, // TODO: probably not string?
+    pub headers: Option<String>,
     pub http_status: Option<String>,
-    pub is_archived: u32, // 1 or 0 TODO: encode in enum or cast to bool
+
+    #[serde(deserialize_with = "parse_intbool")]
+    pub is_archived: bool,
     pub is_public: bool,
-    pub is_starred: u32,          // same as is_archived
-    pub language: Option<String>, // TODO: probably not string
+
+    #[serde(deserialize_with = "parse_intbool")]
+    pub is_starred: bool,
+    pub language: Option<String>,
     pub mimetype: Option<String>,
     pub origin_url: Option<String>,
     pub preview_picture: Option<String>,
@@ -173,15 +162,16 @@ pub struct NewAnnotation {
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct ExistsResponse {
-    pub exists: Option<u32>,
+    pub exists: Option<ID>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Range {
-    pub end: String,
-    pub endOffset: String,
-    pub start: String,
-    pub startOffset: String,
+    pub end: Option<String>,
+    pub end_offset: String,
+    pub start: Option<String>,
+    pub start_offset: String,
 }
 
 pub type Tags = Vec<Tag>;
