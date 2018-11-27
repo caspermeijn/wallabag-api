@@ -1,0 +1,14 @@
+[package]
+name = "wallabag-tui"
+version = "0.1.0"
+authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
+edition = "2018"
+
+[dependencies]
+tui = "0.3.0"
+termion = "1.5.1"
+failure = "0.1.3"
+log = "0.4"
+simplelog = "0.5.3"
+
+wallabag-api = { path = "../wallabag-api" }
