@@ -10,17 +10,19 @@ use serde_json::{from_value, Value};
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, ResponseError};
 use crate::types::{
-    Annotation, Annotations, AuthInfo, Config, DeletedEntry, DeletedTag, Entries, EntriesFilter,
+    Annotation, Annotations, Config, DeletedEntry, DeletedTag, Entries, EntriesFilter,
     Entry, ExistsInfo, ExistsResponse, NewAnnotation, NewEntry, NewlyRegisteredInfo,
-    PaginatedEntries, PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User, ID,
-    UNIT,
+    PaginatedEntries, PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User, ID, UNIT,
 };
 use crate::utils::{EndPoint, Format, UrlBuilder};
 
 /// The main thing that provides all the methods for interacting with the
 /// wallabag api.
 pub struct Client {
-    auth_info: AuthInfo,
+    client_id: String,
+    client_secret: String,
+    username: String,
+    password: String,
     token_info: Option<TokenInfo>,
     url: UrlBuilder,
     client: reqwest::Client,
@@ -29,7 +31,10 @@ pub struct Client {
 impl Client {
     pub fn new(config: Config) -> Self {
         Client {
-            auth_info: config.auth_info,
+            client_id: config.client_id,
+            client_secret: config.client_secret,
+            username: config.username,
+            password: config.password,
             token_info: None,
             url: UrlBuilder::new(config.base_url),
             client: reqwest::Client::new(),
@@ -57,13 +62,13 @@ impl Client {
     fn load_token(&mut self) -> ClientResult<()> {
         let mut fields = HashMap::new();
         fields.insert("grant_type".to_owned(), "password".to_owned());
-        fields.insert("client_id".to_owned(), self.auth_info.client_id.clone());
+        fields.insert("client_id".to_owned(), self.client_id.clone());
         fields.insert(
             "client_secret".to_owned(),
-            self.auth_info.client_secret.clone(),
+            self.client_secret.clone(),
         );
-        fields.insert("username".to_owned(), self.auth_info.username.clone());
-        fields.insert("password".to_owned(), self.auth_info.password.clone());
+        fields.insert("username".to_owned(), self.username.clone());
+        fields.insert("password".to_owned(), self.password.clone());
 
         let token_info: TokenInfo =
             self.json_q(Method::POST, EndPoint::Token, UNIT, &fields, false)?;
@@ -80,10 +85,10 @@ impl Client {
 
         let mut fields = HashMap::new();
         fields.insert("grant_type".to_owned(), "refresh_token".to_owned());
-        fields.insert("client_id".to_owned(), self.auth_info.client_id.clone());
+        fields.insert("client_id".to_owned(), self.client_id.clone());
         fields.insert(
             "client_secret".to_owned(),
-            self.auth_info.client_secret.clone(),
+            self.client_secret.clone(),
         );
         fields.insert(
             "refresh_token".to_owned(),
@@ -268,7 +273,8 @@ impl Client {
 
     /// Update entry. To leave an editable field unchanged, set to `None`.
     pub fn update_entry<T: Into<ID>>(&mut self, id: T, entry: &PatchEntry) -> ClientResult<Entry> {
-        let json: Value = self.smart_json_q(Method::PATCH, EndPoint::Entry(id.into()), UNIT, entry)?;
+        let json: Value =
+            self.smart_json_q(Method::PATCH, EndPoint::Entry(id.into()), UNIT, entry)?;
 
         println!("{:#?}", json);
         let entry = from_value(json)?;
@@ -285,8 +291,7 @@ impl Client {
     }
 
     /// Get an entry by id.
-    pub fn get_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry>
-    {
+    pub fn get_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
         self.smart_json_q(Method::GET, EndPoint::Entry(id.into()), UNIT, UNIT)
     }
 
@@ -368,7 +373,8 @@ impl Client {
 
     /// Get all annotations for an entry (by id).
     pub fn get_annotations<T: Into<ID>>(&mut self, id: T) -> ClientResult<Annotations> {
-        let json: Value = self.smart_json_q(Method::GET, EndPoint::Annotation(id.into()), UNIT, UNIT)?;
+        let json: Value =
+            self.smart_json_q(Method::GET, EndPoint::Annotation(id.into()), UNIT, UNIT)?;
 
         // extract the embedded annotations vec from the Value
         match json {
@@ -401,8 +407,7 @@ impl Client {
         // loop to handle pagination. No other api endpoints paginate so it's
         // fine here.
         loop {
-            let json: Value =
-                self.smart_json_q(Method::GET, EndPoint::Entries, &filter, UNIT)?;
+            let json: Value = self.smart_json_q(Method::GET, EndPoint::Entries, &filter, UNIT)?;
 
             println!("{:#?}", json);
             let json: PaginatedEntries = from_value(json)?;
@@ -423,13 +428,23 @@ impl Client {
 
     /// Get an export of an entry in a particular format.
     pub fn export_entry<T: Into<ID>>(&mut self, entry_id: T, fmt: Format) -> ClientResult<String> {
-        let data = self.smart_text_q(Method::GET, EndPoint::Export(entry_id.into(), fmt), UNIT, UNIT)?;
+        let data = self.smart_text_q(
+            Method::GET,
+            EndPoint::Export(entry_id.into(), fmt),
+            UNIT,
+            UNIT,
+        )?;
         Ok(data)
     }
 
     /// Get a list of all tags for an entry by entry id.
     pub fn get_tags_for_entry<T: Into<ID>>(&mut self, entry_id: T) -> ClientResult<Tags> {
-        self.smart_json_q(Method::GET, EndPoint::EntryTags(entry_id.into()), UNIT, UNIT)
+        self.smart_json_q(
+            Method::GET,
+            EndPoint::EntryTags(entry_id.into()),
+            UNIT,
+            UNIT,
+        )
     }
 
     /// Add tags to an entry by entry id. Idempotent operation. No problems if
@@ -437,7 +452,11 @@ impl Client {
     /// TODO: use types to restrict chars in tags; if a tag contains a comma,
     /// then it will be saved as two tags (eg. 'wat,dis' becomes 'wat' and 'dis'
     /// tags on the server.
-    pub fn add_tags_to_entry<T: Into<ID>>(&mut self, entry_id: ID, tags: Vec<String>) -> ClientResult<Entry> {
+    pub fn add_tags_to_entry<T: Into<ID>>(
+        &mut self,
+        entry_id: ID,
+        tags: Vec<String>,
+    ) -> ClientResult<Entry> {
         let mut data = HashMap::new();
         data.insert("tags".to_owned(), tags.join(","));
 
@@ -447,7 +466,11 @@ impl Client {
     /// Delete a tag (by id) from an entry (by id). Returns err 404 if entry or
     /// tag not found. Idempotent. Removing a tag that exists but doesn't exist
     /// on the entry completes without error.
-    pub fn delete_tag_from_entry<T: Into<ID>, U: Into<ID>>(&mut self, entry_id: T, tag_id: U) -> ClientResult<Entry> {
+    pub fn delete_tag_from_entry<T: Into<ID>, U: Into<ID>>(
+        &mut self,
+        entry_id: T,
+        tag_id: U,
+    ) -> ClientResult<Entry> {
         self.smart_json_q(
             Method::DELETE,
             EndPoint::DeleteEntryTag(entry_id.into(), tag_id.into()),

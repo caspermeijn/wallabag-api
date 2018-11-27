@@ -9,6 +9,7 @@ mod patch_entry;
 mod user;
 mod entries_filter;
 
+// re-export submodule types
 pub use self::new_entry::NewEntry;
 pub use self::patch_entry::PatchEntry;
 pub use self::user::{NewlyRegisteredInfo, RegisterInfo, User};
@@ -22,11 +23,14 @@ impl From<Entry> for ID {
     }
 }
 
+/// The type returned from `check_exists`. The format is URL: ID. If ID is None,
+/// then that url doesn't exist in the db.
 pub type ExistsInfo = HashMap<String, Option<ID>>;
 
 
+/// used internally to store information about the oauth token
 #[derive(Deserialize, Debug)]
-pub struct TokenInfo {
+pub(crate) struct TokenInfo {
     pub access_token: String,
     pub expires_in: u32,
     pub token_type: String,
@@ -34,17 +38,13 @@ pub struct TokenInfo {
     pub refresh_token: String,
 }
 
+/// configuration to use to init a `Client`.
 #[derive(Debug)]
-pub struct AuthInfo {
+pub struct Config {
     pub client_id: String,
     pub client_secret: String,
     pub username: String,
     pub password: String,
-}
-
-#[derive(Debug)]
-pub struct Config {
-    pub auth_info: AuthInfo,
     pub base_url: String,
 }
 
@@ -75,7 +75,7 @@ pub struct Entry {
     pub content: Option<String>,
     pub created_at: String,
     pub domain_name: Option<String>,
-    pub headers: Option<String>, // TODO: probably not string?
+    pub headers: Option<String>,
     pub http_status: Option<String>,
     pub id: ID,
 
@@ -85,7 +85,7 @@ pub struct Entry {
 
     #[serde(deserialize_with = "parse_intbool")]
     pub is_starred: bool,
-    pub language: Option<String>, // TODO: probably not string
+    pub language: Option<String>,
     pub mimetype: Option<String>,
     pub origin_url: Option<String>,
     pub preview_picture: Option<String>,
@@ -103,8 +103,10 @@ pub struct Entry {
     pub user_name: String,
 }
 
-/// A struct representing an entry from wallabag (a full saved article including
-/// annotations and tags).
+/// A struct representing a deleted entry from wallabag (a full saved article including
+/// annotations and tags). The only difference from the full entry is that this
+/// doesn't have an id. Only used internally because a full entry gets
+/// reconstituted before being returned to the client.
 #[derive(Deserialize, Debug)]
 pub(crate) struct DeletedEntry {
     pub annotations: Option<Annotations>,
