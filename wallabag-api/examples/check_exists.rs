@@ -27,7 +27,7 @@ pub fn main() -> Result<(), ()> {
         ()
     })?;
 
-    let res = client.check_exists(&url);
+    let res = client.check_exists(url.as_ref());
 
     match res {
         Err(e) => {

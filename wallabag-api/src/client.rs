@@ -1,5 +1,6 @@
 // std libs
 use std::collections::HashMap;
+use std::sync::Mutex;
 
 // extern crates
 use reqwest::{self, Method, Response, StatusCode};
@@ -46,20 +47,12 @@ impl Client {
     fn get_token(&mut self) -> ClientResult<String> {
         match self.token_info {
             Some(ref t) => Ok(t.access_token.clone()),
-            None => {
-                self.load_token()?;
-                Ok(self
-                    .token_info
-                    .as_ref()
-                    .expect("load_token() should have populated it")
-                    .access_token
-                    .clone())
-            }
+            None => self.load_token(),
         }
     }
 
     /// Use credentials in the config to obtain an access token.
-    fn load_token(&mut self) -> ClientResult<()> {
+    fn load_token(&mut self) -> ClientResult<String> {
         let mut fields = HashMap::new();
         fields.insert("grant_type".to_owned(), "password".to_owned());
         fields.insert("client_id".to_owned(), self.client_id.clone());
@@ -71,11 +64,11 @@ impl Client {
             self.json_q(Method::POST, EndPoint::Token, UNIT, &fields, false)?;
         self.token_info = Some(token_info);
 
-        Ok(())
+        Ok(self.token_info.as_ref().unwrap().access_token.clone())
     }
 
     /// Use saved token if present to get a fresh access token.
-    fn refresh_token(&mut self) -> ClientResult<()> {
+    fn refresh_token(&mut self) -> ClientResult<String> {
         if self.token_info.is_none() {
             return self.load_token();
         }
@@ -93,7 +86,7 @@ impl Client {
             self.json_q(Method::POST, EndPoint::Token, UNIT, &fields, false)?;
         self.token_info = Some(token_info);
 
-        Ok(())
+        Ok(self.token_info.as_ref().unwrap().access_token.clone())
     }
 
     /// Smartly run a request that expects to receive json back. Handles adding
@@ -229,7 +222,7 @@ impl Client {
 
     /// Check if a list of urls already have entries. This is more efficient if
     /// you want to batch check urls since only a single request is required.
-    pub fn check_exists_vec(&mut self, urls: Vec<String>) -> ClientResult<ExistsInfo> {
+    pub fn check_exists_vec<T: Into<String>>(&mut self, urls: Vec<T>) -> ClientResult<ExistsInfo> {
         let mut params = vec![];
         params.push(("return_id".to_owned(), "1".to_owned()));
 
@@ -237,16 +230,16 @@ impl Client {
         // values are unsupported:
         // https://github.com/nox/serde_urlencoded/issues/46
         for url in urls.into_iter() {
-            params.push(("urls[]".to_owned(), url));
+            params.push(("urls[]".to_owned(), url.into()));
         }
 
         self.smart_json_q(Method::GET, EndPoint::Exists, &params, UNIT)
     }
 
     /// check if a url already has an entry recorded.
-    pub fn check_exists(&mut self, url: &str) -> ClientResult<Option<ID>> {
+    pub fn check_exists<T: Into<String>>(&mut self, url: T) -> ClientResult<Option<ID>> {
         let mut params = HashMap::new();
-        params.insert("url".to_owned(), url.to_owned());
+        params.insert("url".to_owned(), url.into());
         params.insert("return_id".to_owned(), "1".to_owned());
 
         let exists_info: ExistsResponse =
@@ -401,11 +394,8 @@ impl Client {
         // loop to handle pagination. No other api endpoints paginate so it's
         // fine here.
         loop {
-            let json: Value = self.smart_json_q(Method::GET, EndPoint::Entries, &filter, UNIT)?;
-
-            println!("{:#?}", json);
-            let json: PaginatedEntries = from_value(json)?;
-            // unimplemented!();
+            let json: PaginatedEntries =
+                self.smart_json_q(Method::GET, EndPoint::Entries, &filter, UNIT)?;
 
             entries.extend(json._embedded.items.into_iter());
 
@@ -443,18 +433,23 @@ impl Client {
 
     /// Add tags to an entry by entry id. Idempotent operation. No problems if
     /// tags list is empty.
-    /// TODO: use types to restrict chars in tags; if a tag contains a comma,
-    /// then it will be saved as two tags (eg. 'wat,dis' becomes 'wat' and 'dis'
-    /// tags on the server.
-    pub fn add_tags_to_entry<T: Into<ID>>(
+    pub fn add_tags_to_entry<T: Into<ID>, U: Into<String>>(
         &mut self,
-        entry_id: ID,
-        tags: Vec<String>,
+        entry_id: T,
+        tags: Vec<U>,
     ) -> ClientResult<Entry> {
         let mut data = HashMap::new();
-        data.insert("tags".to_owned(), tags.join(","));
+        data.insert(
+            "tags",
+            tags.into_iter().map(|x| x.into()).collect::<Vec<String>>(),
+        );
 
-        self.smart_json_q(Method::POST, EndPoint::EntryTags(entry_id), UNIT, &data)
+        self.smart_json_q(
+            Method::POST,
+            EndPoint::EntryTags(entry_id.into()),
+            UNIT,
+            &data,
+        )
     }
 
     /// Delete a tag (by id) from an entry (by id). Returns err 404 if entry or
@@ -480,8 +475,7 @@ impl Client {
 
     /// Permanently delete a tag by id. This removes the tag from all entries.
     /// Appears to return success if attempting to delete a tag by id that
-    /// exists on the server but isn't accessible to the user. TODO: log
-    /// security ticket.
+    /// exists on the server but isn't accessible to the user.
     pub fn delete_tag<T: Into<ID>>(&mut self, id: T) -> ClientResult<Tag> {
         let id = id.into();
 
@@ -500,9 +494,9 @@ impl Client {
     /// Also, labels aren't necessarily unique across a wallabag installation.
     /// The server should filter by tags belonging to a user in the same db
     /// query.
-    pub fn delete_tag_by_label(&mut self, label: String) -> ClientResult<DeletedTag> {
+    pub fn delete_tag_by_label<T: Into<String>>(&mut self, label: T) -> ClientResult<DeletedTag> {
         let mut params = HashMap::new();
-        params.insert("tag".to_owned(), label);
+        params.insert("tag".to_owned(), label.into());
 
         let deleted_tag: DeletedTag =
             self.smart_json_q(Method::DELETE, EndPoint::TagLabel, &params, UNIT)?;
@@ -515,11 +509,26 @@ impl Client {
     /// and the tag data on attempting to delete for innaccessible tags (tags by
     /// other users?).
     ///
+    /// WARNING: attempting to delete tags with a comma in them (eg. "some,tag")
+    /// will result in tags "some" and "tag" being deleted instead of "some,tag"
+    /// due to the way the api requires tags to be serialized. If you wish to
+    /// delete a tag containing a comma, use `delete_tag_by_label` instead.
+    ///
+    /// TODO: prevent this bug from happening; check and encode in error.
+    ///
     /// Returns a list of tags that were deleted.
-    pub fn delete_tags_by_label(&mut self, tags: Vec<String>) -> ClientResult<Vec<DeletedTag>> {
-        let tags = tags.join(",");
+    pub fn delete_tags_by_label<T: Into<String>>(
+        &mut self,
+        tags: Vec<T>,
+    ) -> ClientResult<Vec<DeletedTag>> {
         let mut params = HashMap::new();
-        params.insert("tags".to_owned(), tags);
+        params.insert(
+            "tags",
+            tags.into_iter()
+                .map(|x| x.into())
+                .collect::<Vec<String>>()
+                .join(","),
+        );
 
         // note: api doesn't return tag ids and no way to obtain since deleted
         // by label
@@ -531,8 +540,7 @@ impl Client {
     /// Get the API version. Probably not useful because if the version isn't v2
     /// then this library won't work anyway.
     pub fn get_api_version(&mut self) -> ClientResult<String> {
-        let version: String = self.smart_json_q(Method::GET, EndPoint::Version, UNIT, UNIT)?;
-        Ok(version)
+        self.smart_json_q(Method::GET, EndPoint::Version, UNIT, UNIT)
     }
 
     /// Get the currently logged in user information.

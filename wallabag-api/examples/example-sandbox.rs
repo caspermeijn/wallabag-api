@@ -1,4 +1,6 @@
 use std::env;
+use std::thread;
+use std::time::Duration;
 
 use wallabag_api::types::{Config, Entry, Format, NewAnnotation, PatchEntry, Range, RegisterInfo};
 use wallabag_api::Client;
@@ -18,6 +20,12 @@ pub fn main() {
 
     // let res = client.get_entry(1801067u32);
     // println!("{:#?}", res);
+
+    // thread::sleep(Duration::from_secs(5));
+
+    // let res = client.get_entry(1801067u32);
+    // println!("{:#?}", res);
+
 
     // let entry = Entry {
     //     annotations: None,
@@ -81,8 +89,8 @@ pub fn main() {
     // let res = client.update_annotation(&annotation);
     // println!("{:#?}", res);
 
-    let res = client.get_api_version();
-    println!("{:#?}", res);
+    // let res = client.get_api_version();
+    // println!("{:#?}", res);
 
     // let res = client.register_user(&RegisterInfo {
     //     username: "placeholder".to_owned(),
@@ -105,8 +113,8 @@ pub fn main() {
     // let res = client.delete_tags_by_label(vec!["tag1".to_owned(), "tag2".to_owned()]);
     // println!("{:#?}", res);
 
-    // let res = client.delete_tag_by_label("test".to_owned());
-    // println!("{:#?}", res);
+    let res = client.delete_tag_by_label("wat,dis".to_owned());
+    println!("{:#?}", res);
 
     // let res = client.get_tags();
     // println!("{:#?}", res);
@@ -170,11 +178,11 @@ pub fn main() {
     // }
 
     // let res = client.add_tags_to_entry(
-    //     1801932,
+    //     1801932u32,
     //     vec![
     //         "tag1".to_owned(),
     //         "jktjbucjraontebjtaneteu".to_owned(),
-    //         "deja".to_owned(),
+    //         "cool,hing".to_owned(),
     //         "wat,dis".to_owned(),
     //     ],
     // );
@@ -186,6 +194,7 @@ pub fn main() {
     // );
     // println!("{:#?}", res);
 
-    let res = client.get_user();
-    println!("{:#?}", res);
+//     let res = client.get_user();
+//     println!("{:#?}", res);
+
 }
