@@ -1,7 +1,6 @@
 use std::env;
 
-use wallabag_api::types::{Config, EntriesFilter, SortOrder};
-use wallabag_api::utils::Format;
+use wallabag_api::types::{Config, EntriesFilter, Format, SortOrder};
 use wallabag_api::Client;
 
 pub fn main() {

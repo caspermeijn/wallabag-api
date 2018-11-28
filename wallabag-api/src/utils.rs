@@ -2,37 +2,7 @@ pub(crate) mod serde;
 
 use std::fmt;
 
-use crate::types::ID;
-
-#[derive(Debug, Clone, Copy)]
-pub enum Format {
-    XML,
-    JSON,
-    TXT,
-    CSV,
-    PDF,
-    EPUB,
-    MOBI,
-}
-
-impl fmt::Display for Format {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::Format::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                XML => "xml".to_owned(),
-                JSON => "json".to_owned(),
-                TXT => "txt".to_owned(),
-                CSV => "csv".to_owned(),
-                PDF => "pdf".to_owned(),
-                EPUB => "epub".to_owned(),
-                MOBI => "mobi".to_owned(),
-            }
-        )
-    }
-}
+use crate::types::{Format, ID};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum EndPoint {
@@ -45,7 +15,7 @@ pub(crate) enum EndPoint {
     TagsLabel,
     TagLabel,
     EntriesList,
-    DeleteEntryTag(ID, ID),  // entry id, tag id
+    DeleteEntryTag(ID, ID), // entry id, tag id
     EntryReload(ID),
     EntryTags(ID), // entry id
     Export(ID, Format),

@@ -1,6 +1,6 @@
-
-use serde::Serializer;
-use serde_derive::{Deserialize, Serialize};
+use serde::de::Error as DeError;
+use serde::{Deserialize, Deserializer, Serializer};
+use serde_derive::Deserialize;
 
 /// Used to serialize the boolean values to pseudo-bool integers. The api
 /// appears to support actual bool, but probably should follow the api docs just
@@ -15,3 +15,30 @@ where
     }
 }
 
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+enum IntBool {
+    Int(u32),
+    Bool(bool),
+}
+
+/// Parser for converting pseudo-bool values from 0 or 1 integers to actual bool.
+/// Also handles actual bool for robustness.
+pub(crate) fn parse_intbool<'de, D>(d: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let x = IntBool::deserialize(d)?;
+
+    match x {
+        IntBool::Int(i) => match i {
+            0 => Ok(false),
+            1 => Ok(true),
+            i => Err(DeError::custom(format!(
+                "Could not deserialize {} as bool",
+                i
+            ))),
+        },
+        IntBool::Bool(b) => Ok(b),
+    }
+}

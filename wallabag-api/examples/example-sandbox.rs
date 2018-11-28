@@ -1,9 +1,6 @@
 use std::env;
 
-use wallabag_api::types::{
-    Config, Entry, NewAnnotation, PatchEntry, Range, RegisterInfo,
-};
-use wallabag_api::utils::Format;
+use wallabag_api::types::{Config, Entry, Format, NewAnnotation, PatchEntry, Range, RegisterInfo};
 use wallabag_api::Client;
 
 pub fn main() {
@@ -63,7 +60,6 @@ pub fn main() {
 
     // let res = client.get_entry(entry);
     // println!("{:#?}", res);
-
 
     // let res = client.get_entries();
     // println!("{:#?}", res);
@@ -192,5 +188,4 @@ pub fn main() {
 
     let res = client.get_user();
     println!("{:#?}", res);
-
 }

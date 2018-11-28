@@ -10,11 +10,11 @@ use serde_json::{from_value, Value};
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, ResponseError};
 use crate::types::{
-    Annotation, Annotations, Config, DeletedEntry, DeletedTag, Entries, EntriesFilter,
-    Entry, ExistsInfo, ExistsResponse, NewAnnotation, NewEntry, NewlyRegisteredInfo,
+    Annotation, Annotations, Config, DeletedEntry, DeletedTag, Entries, EntriesFilter, Entry,
+    ExistsInfo, ExistsResponse, Format, NewAnnotation, NewEntry, NewlyRegisteredInfo,
     PaginatedEntries, PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User, ID, UNIT,
 };
-use crate::utils::{EndPoint, Format, UrlBuilder};
+use crate::utils::{EndPoint, UrlBuilder};
 
 /// The main thing that provides all the methods for interacting with the
 /// wallabag api.
@@ -63,10 +63,7 @@ impl Client {
         let mut fields = HashMap::new();
         fields.insert("grant_type".to_owned(), "password".to_owned());
         fields.insert("client_id".to_owned(), self.client_id.clone());
-        fields.insert(
-            "client_secret".to_owned(),
-            self.client_secret.clone(),
-        );
+        fields.insert("client_secret".to_owned(), self.client_secret.clone());
         fields.insert("username".to_owned(), self.username.clone());
         fields.insert("password".to_owned(), self.password.clone());
 
@@ -86,10 +83,7 @@ impl Client {
         let mut fields = HashMap::new();
         fields.insert("grant_type".to_owned(), "refresh_token".to_owned());
         fields.insert("client_id".to_owned(), self.client_id.clone());
-        fields.insert(
-            "client_secret".to_owned(),
-            self.client_secret.clone(),
-        );
+        fields.insert("client_secret".to_owned(), self.client_secret.clone());
         fields.insert(
             "refresh_token".to_owned(),
             self.token_info.as_ref().unwrap().refresh_token.clone(),

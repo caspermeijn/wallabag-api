@@ -1,24 +1,31 @@
+///! Thing
 use std::collections::HashMap;
 
-use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer};
 use serde_derive::{Deserialize, Serialize};
 
 use chrono::{DateTime, Utc};
 
+use crate::utils::serde::parse_intbool;
+
 mod entries_filter;
+mod format;
 mod new_entry;
 mod patch_entry;
 mod user;
 
 // re-export submodule types
 pub use self::entries_filter::{EntriesFilter, SortBy, SortOrder};
+pub use self::format::Format;
 pub use self::new_entry::NewEntry;
 pub use self::patch_entry::PatchEntry;
 pub use self::user::{NewlyRegisteredInfo, RegisterInfo, User};
 
+/// The type used as an ID for all data structures. Declared for clarity.
 pub type ID = u32;
 
+/// This is implemented so that an Entry can be used interchangably with an ID
+/// for some client methods. For convenience.
 impl From<Entry> for ID {
     fn from(entry: Entry) -> Self {
         entry.id
@@ -52,36 +59,9 @@ pub struct Config {
 /// type alias: a list of entries as returned from some endpoints
 pub type Entries = Vec<Entry>;
 
-#[derive(Deserialize, Debug)]
-#[serde(untagged)]
-enum IntBool {
-    Int(u32),
-    Bool(bool),
-}
-
-/// Parser for converting pseudo-bool values from 0 or 1 integers to actual bool.
-/// Also handles actual bool for robustness.
-fn parse_intbool<'de, D>(d: D) -> Result<bool, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let x = IntBool::deserialize(d)?;
-
-    match x {
-        IntBool::Int(i) => match i {
-            0 => Ok(false),
-            1 => Ok(true),
-            i => Err(DeError::custom(format!(
-                "Could not deserialize {} as bool",
-                i
-            ))),
-        },
-        IntBool::Bool(b) => Ok(b),
-    }
-}
-
 /// A struct representing an entry from wallabag (a full saved article including
-/// annotations and tags).
+/// all annotations and tags; annotations and tags do not need to be requested
+/// separately).
 #[derive(Deserialize, Debug)]
 pub struct Entry {
     pub annotations: Option<Annotations>,
@@ -161,8 +141,10 @@ pub(crate) struct DeletedEntry {
     pub user_name: String,
 }
 
+/// Type alias for clarity.
 pub type Annotations = Vec<Annotation>;
 
+/// Represents an annotation as returned from the api.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Annotation {
     pub annotator_schema_version: String,
@@ -175,6 +157,7 @@ pub struct Annotation {
     pub user: Option<String>,
 }
 
+/// Represents an annotation to be created (hence no ID yet).
 #[derive(Serialize, Debug)]
 pub struct NewAnnotation {
     pub quote: String,
@@ -183,11 +166,17 @@ pub struct NewAnnotation {
     pub user: Option<String>,
 }
 
+/// Internal struct for deserializing a response upon checking the existance of
+/// a url.
 #[derive(Deserialize, Debug)]
 pub(crate) struct ExistsResponse {
     pub exists: Option<ID>,
 }
 
+/// Range as used in an `Annotation`. Shows where the annotation is in the
+/// content.
+///
+/// TODO: research what the fields mean.
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Range {
@@ -197,8 +186,10 @@ pub struct Range {
     pub start_offset: String,
 }
 
+/// List of tags declared for clarity.
 pub type Tags = Vec<Tag>;
 
+/// Represents a tag from the api.
 #[derive(Deserialize, Debug)]
 pub struct Tag {
     pub id: ID,
@@ -206,18 +197,22 @@ pub struct Tag {
     pub slug: String,
 }
 
+/// Convenience method to use an ID or Tag interchangably in client methods.
 impl From<Tag> for ID {
     fn from(tag: Tag) -> Self {
         tag.id
     }
 }
 
+/// Represents a deleted tag, since deleted tags don't come with IDs.
 #[derive(Deserialize, Debug)]
 pub struct DeletedTag {
     pub label: String,
     pub slug: String,
 }
 
+/// Internal struct for retrieving a list of entries from the api when
+/// paginated.
 #[derive(Deserialize, Debug)]
 pub(crate) struct PaginatedEntries {
     pub limit: u32,
@@ -227,6 +222,7 @@ pub(crate) struct PaginatedEntries {
     pub _embedded: EmbeddedEntries,
 }
 
+/// Entries as stored in `PaginatedEntries`.
 #[derive(Deserialize, Debug)]
 pub(crate) struct EmbeddedEntries {
     pub items: Entries,
