@@ -3,6 +3,7 @@ use serde_derive::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
 use super::common::ID;
+use crate::utils::serde::parse_stringint;
 
 /// Type alias for clarity.
 pub type Annotations = Vec<Annotation>;
@@ -13,7 +14,7 @@ pub struct Annotation {
     pub annotator_schema_version: String,
     pub created_at: DateTime<Utc>,
     pub id: ID,
-    pub quote: String,
+    pub quote: Option<String>,
     pub ranges: Vec<Range>,
     pub text: String,
     pub updated_at: DateTime<Utc>,
@@ -29,10 +30,9 @@ pub(crate) struct AnnotationRows {
 /// Represents an annotation to be created (hence no ID yet).
 #[derive(Serialize, Debug)]
 pub struct NewAnnotation {
-    pub quote: String,
+    pub quote: String, // TODO: quote must not be empty string?!
     pub ranges: Vec<Range>,
     pub text: String,
-    pub user: Option<String>,
 }
 /// Range as used in an `Annotation`. Shows where the annotation is in the
 /// content.
@@ -42,7 +42,11 @@ pub struct NewAnnotation {
 #[serde(rename_all = "camelCase")]
 pub struct Range {
     pub end: Option<String>,
-    pub end_offset: String,
     pub start: Option<String>,
-    pub start_offset: String,
+
+    // these values have been observed as literal strings and integers
+    #[serde(deserialize_with = "parse_stringint")]
+    pub end_offset: u32,
+    #[serde(deserialize_with = "parse_stringint")]
+    pub start_offset: u32,
 }

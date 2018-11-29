@@ -13,7 +13,7 @@ pub fn main() {
         client_secret: env::var("WALLABAG_CLIENT_SECRET").expect("WALLABAG_CLIENT_SECRET not set"),
         username: env::var("WALLABAG_USERNAME").expect("WALLABAG_USERNAME not set"),
         password: env::var("WALLABAG_PASSWORD").expect("WALLABAG_PASSWORD not set"),
-        base_url: "https://framabag.org".to_owned(),
+        base_url:  env::var("WALLABAG_URL").expect("WALLABAG_URL not set"),
     };
 
     println!("{:#?}", config);
@@ -111,12 +111,12 @@ pub fn main() {
     // let res = client.get_tags();
     // println!("{:#?}", res);
 
-    let res = client.delete_tags_by_label(vec![
-        TagString::new("tag1").unwrap(),
-        TagString::new("\"wat").unwrap(),
-        TagString::new("tag2").unwrap(),
-    ]);
-    println!("{:#?}", res);
+    // let res = client.delete_tags_by_label(vec![
+    //     TagString::new("tag1").unwrap(),
+    //     TagString::new("\"wat").unwrap(),
+    //     TagString::new("tag2").unwrap(),
+    // ]);
+    // println!("{:#?}", res);
 
     // let res = client.delete_tag_by_label("".to_owned());
     // println!("{:#?}", res);
@@ -157,6 +157,20 @@ pub fn main() {
     //     origin_url: None,
 
     // });
+    // println!("{:#?}", res);
+
+    // let ann = NewAnnotation {
+    //     quote: "quote".to_owned(),
+    //     ranges: vec![Range {
+    //         end: None,
+    //         start: None,
+    //         end_offset: "3",
+    //         start_offset: "1",
+    //     }],
+    //     text: "wat".to_owned(),
+    // };
+
+    // let res = client.create_annotation(1803171, ann);
     // println!("{:#?}", res);
 
     // let res = client.get_entry(1801067);

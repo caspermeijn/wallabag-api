@@ -12,3 +12,7 @@ Cargo.lock
 
 # stray log files
 *.log
+
+# environments
+.env
+.env.*

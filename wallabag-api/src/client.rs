@@ -367,6 +367,8 @@ impl Client {
     fn _get_entries(&mut self, filter: EntriesFilter) -> ClientResult<Entries> {
         let mut entries = Entries::new();
 
+        // TODO: should change the number per page?
+
         // we want to take control so that we can manage the hidden fields and
         // handle pagination
         let mut filter = filter.clone();

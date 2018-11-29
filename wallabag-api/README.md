@@ -4,6 +4,16 @@
 Provides types and functions for interacting with a Wallabag server.
 
 
+## Info
+
+To view the docs, use cargo to generate and open them (from within the cloned
+repo).
+
+```
+cargo doc --open -p wallabag-api
+```
+
+
 ## supported endpoints:
 
 
@@ -59,3 +69,28 @@ Provides types and functions for interacting with a Wallabag server.
       Register an user and create a client.
 - [X] GET `/api/version.{_format}`
       Retrieve version number.
+
+
+## Examples
+
+A few small examples are provided. To use these, the following environment
+variables must be set (for authentication). For example:
+
+```sh
+export WALLABAG_CLIENT_ID="client_id"
+export WALLABAG_CLIENT_SECRET="client_secret"
+export WALLABAG_USERNAME="username"
+export WALLABAG_PASSWORD="password"
+export WALLABAG_URL="https://framabag.org"
+```
+
+The examples include:
+
+- [check_exists](examples/check_exists.rs): check if there is an entry
+  corresponding to the url provided.
+- [example_sandbox](examples/example_sandbox.rs): a bunch of (mostly) commented
+  out small examples, used for manual testing... have fun experimenting!
+- [get_entries](examples/get_entries.rs): simply retrieve and debug print all
+  entries. See the source code for filtering options.
+- [save_url](examples/save_url.rs): save a url to the server, printing the
+  created entry on success.

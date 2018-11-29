@@ -42,3 +42,30 @@ where
         IntBool::Bool(b) => Ok(b),
     }
 }
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+enum StringInt {
+    Int(u32),
+    String(String),
+}
+
+/// Parser for converting integers or integers stored as strings to integers.
+pub(crate) fn parse_stringint<'de, D>(d: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let x = StringInt::deserialize(d)?;
+
+    match x {
+        StringInt::Int(i) => Ok(i),
+        StringInt::String(s) => match s.parse::<u32>() {
+            Ok(i) => Ok(i),
+            Err(e) => Err(DeError::custom(format!(
+                "Could not deserialize {}
+                as u32",
+                s
+            ))),
+        },
+    }
+}
