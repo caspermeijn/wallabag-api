@@ -4,4 +4,5 @@ members = [
   "wallabag-gtk",
   "wallabag-api",
   "wallabag-tui",
+  "wallabag-cli",
 ]

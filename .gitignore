@@ -16,3 +16,7 @@ Cargo.lock
 # environments
 .env
 .env.*
+
+# stray sqlite databases
+*.db
+*.sqlite3

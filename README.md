@@ -6,7 +6,9 @@ Linux wallabag client tools
 The top-level repo is a cargo workspace. See subdirectories for tools:
 
 - client api library: [wallabag-api](wallabag-api/)
-- gtk client: [wallabag-gtk](wallabag-gtk/)
+- gtk client: [wallabag-gtk](wallabag-gtk/) (unimplemented)
+- tui client: [wallabag-tui](wallabag-tui/) (unimplemented)
+- cli client: [wallabag-cli](wallabag-cli/) (wip)
 
 
 

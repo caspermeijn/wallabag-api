@@ -1,0 +1,14 @@
+[package]
+name = "wallabag-cli"
+version = "0.1.0"
+authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
+edition = "2018"
+
+[dependencies]
+failure = "0.1.3"
+log = "0.4"
+simplelog = "0.5.3"
+clap = "2.32"
+diesel = { version = "1.3", features = ["sqlite"] }
+
+wallabag-api = { path = "../wallabag-api" }
