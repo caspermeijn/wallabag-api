@@ -1,5 +1,6 @@
-///! Thing
 use std::collections::HashMap;
+///! Thing
+use std::fmt;
 
 use serde::{Deserialize, Deserializer};
 use serde_derive::{Deserialize, Serialize};
@@ -157,6 +158,12 @@ pub struct Annotation {
     pub user: Option<String>,
 }
 
+/// Intermediary struct for deserializing a list of annotations.
+#[derive(Deserialize, Debug)]
+pub(crate) struct AnnotationRows {
+    pub rows: Annotations,
+}
+
 /// Represents an annotation to be created (hence no ID yet).
 #[derive(Serialize, Debug)]
 pub struct NewAnnotation {
@@ -209,6 +216,33 @@ impl From<Tag> for ID {
 pub struct DeletedTag {
     pub label: String,
     pub slug: String,
+}
+
+/// Represents a valid tag name
+#[derive(Debug)]
+pub struct TagString {
+    label: String,
+}
+
+// so we can use to_string
+impl fmt::Display for TagString {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.label)
+    }
+}
+
+impl TagString {
+    /// Create a new tag label, guaranteed to be a valid tag label. Returns None
+    /// if invalid tag label.
+    pub fn new<T: Into<String>>(label: T) -> Option<Self> {
+        let label = label.into();
+
+        if label.as_str().contains(",") {
+            None
+        } else {
+            Some(TagString { label })
+        }
+    }
 }
 
 /// Internal struct for retrieving a list of entries from the api when

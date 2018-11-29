@@ -11,9 +11,10 @@ use serde_json::{from_value, Value};
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, ResponseError};
 use crate::types::{
-    Annotation, Annotations, Config, DeletedEntry, DeletedTag, Entries, EntriesFilter, Entry,
-    ExistsInfo, ExistsResponse, Format, NewAnnotation, NewEntry, NewlyRegisteredInfo,
-    PaginatedEntries, PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User, ID, UNIT,
+    Annotation, AnnotationRows, Annotations, Config, DeletedEntry, DeletedTag, Entries,
+    EntriesFilter, Entry, ExistsInfo, ExistsResponse, Format, NewAnnotation, NewEntry,
+    NewlyRegisteredInfo, PaginatedEntries, PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User,
+    ID, UNIT, TagString,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -168,7 +169,7 @@ impl Client {
         Ok(self.q(method, end_point, query, json, use_token)?.json()?)
     }
 
-    /// Just build and send a single request.
+    /// Build and send a single request. Does most of the heavy lifting.
     fn q<J, Q>(
         &mut self,
         method: Method,
@@ -222,7 +223,10 @@ impl Client {
 
     /// Check if a list of urls already have entries. This is more efficient if
     /// you want to batch check urls since only a single request is required.
-    pub fn check_exists_vec<T: Into<String>>(&mut self, urls: Vec<T>) -> ClientResult<ExistsInfo> {
+    pub fn batch_check_exists<T: Into<String>>(
+        &mut self,
+        urls: Vec<T>,
+    ) -> ClientResult<ExistsInfo> {
         let mut params = vec![];
         params.push(("return_id".to_owned(), "1".to_owned()));
 
@@ -251,30 +255,21 @@ impl Client {
 
     /// Add a new entry
     pub fn create_entry(&mut self, new_entry: &NewEntry) -> ClientResult<Entry> {
-        let json: Value = self.smart_json_q(Method::POST, EndPoint::Entries, UNIT, new_entry)?;
-
-        let entry = from_value(json)?;
-
-        Ok(entry)
+        self.smart_json_q(Method::POST, EndPoint::Entries, UNIT, new_entry)
     }
 
     /// Update entry. To leave an editable field unchanged, set to `None`.
     pub fn update_entry<T: Into<ID>>(&mut self, id: T, entry: &PatchEntry) -> ClientResult<Entry> {
-        let json: Value =
-            self.smart_json_q(Method::PATCH, EndPoint::Entry(id.into()), UNIT, entry)?;
-
-        println!("{:#?}", json);
-        let entry = from_value(json)?;
-
-        Ok(entry)
+        self.smart_json_q(Method::PATCH, EndPoint::Entry(id.into()), UNIT, entry)
     }
 
-    /// Reload entry.
+    /// Reload entry. This tells the server to re-fetch content from the url (or
+    /// origin url?) and use the result to refresh the entry contents.
+    ///
+    /// This returns `Err(ClientError::NotModified)` if the server either could
+    /// not refresh the contents, or the content does not get modified.
     pub fn reload_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
-        let entry: Entry =
-            self.smart_json_q(Method::PATCH, EndPoint::EntryReload(id.into()), UNIT, UNIT)?;
-
-        Ok(entry)
+        self.smart_json_q(Method::PATCH, EndPoint::EntryReload(id.into()), UNIT, UNIT)
     }
 
     /// Get an entry by id.
@@ -283,13 +278,13 @@ impl Client {
     }
 
     /// Delete an entry by id.
-    /// TODO: allow passing a u32 id or an Entry interchangably
     pub fn delete_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
         let id = id.into();
         let json: DeletedEntry =
             self.smart_json_q(Method::DELETE, EndPoint::Entry(id), UNIT, UNIT)?;
 
-        // build an entry composed of the deleted entry returned and the id
+        // build an entry composed of the deleted entry returned and the id,
+        // because the entry returned does not include the id.
         let entry = Entry {
             id,
             annotations: json.annotations,
@@ -324,14 +319,12 @@ impl Client {
 
     /// Update an annotation.
     pub fn update_annotation(&mut self, annotation: &Annotation) -> ClientResult<Annotation> {
-        let json: Annotation = self.smart_json_q(
+        self.smart_json_q(
             Method::PUT,
             EndPoint::Annotation(annotation.id),
             UNIT,
             annotation,
-        )?;
-
-        Ok(json)
+        )
     }
 
     /// Create a new annotation on an entry.
@@ -340,39 +333,24 @@ impl Client {
         entry_id: T,
         annotation: NewAnnotation,
     ) -> ClientResult<Annotation> {
-        let json: Annotation = self.smart_json_q(
+        self.smart_json_q(
             Method::POST,
             EndPoint::Annotation(entry_id.into()),
             UNIT,
             &annotation,
-        )?;
-
-        Ok(json)
+        )
     }
 
     /// Delete an annotation by id
     pub fn delete_annotation<T: Into<ID>>(&mut self, id: T) -> ClientResult<Annotation> {
-        let json: Annotation =
-            self.smart_json_q(Method::DELETE, EndPoint::Annotation(id.into()), UNIT, UNIT)?;
-
-        Ok(json)
+        self.smart_json_q(Method::DELETE, EndPoint::Annotation(id.into()), UNIT, UNIT)
     }
 
     /// Get all annotations for an entry (by id).
     pub fn get_annotations<T: Into<ID>>(&mut self, id: T) -> ClientResult<Annotations> {
-        let json: Value =
+        let json: AnnotationRows =
             self.smart_json_q(Method::GET, EndPoint::Annotation(id.into()), UNIT, UNIT)?;
-
-        // extract the embedded annotations vec from the Value
-        match json {
-            Value::Object(map) => {
-                if let Some(Value::Array(vec)) = map.get("rows") {
-                    return Ok(from_value(Value::Array(vec.to_vec()))?);
-                }
-            }
-            _ => (),
-        }
-        Err(ClientError::UnexpectedJsonStructure)
+        Ok(json.rows)
     }
 
     /// Get all entries.
@@ -381,13 +359,16 @@ impl Client {
     }
 
     /// Get all entries, filtered by filter parameters.
-    pub fn get_entries_filtered(&mut self, filter: EntriesFilter) -> ClientResult<Entries> {
+    pub fn get_entries_with_filter(&mut self, filter: EntriesFilter) -> ClientResult<Entries> {
         self._get_entries(filter)
     }
 
+    /// Does the actual work of retrieving the entries. Handles pagination.
     fn _get_entries(&mut self, filter: EntriesFilter) -> ClientResult<Entries> {
         let mut entries = Entries::new();
 
+        // we want to take control so that we can manage the hidden fields and
+        // handle pagination
         let mut filter = filter.clone();
         filter.page = 1; // just to make sure
 
@@ -399,11 +380,10 @@ impl Client {
 
             entries.extend(json._embedded.items.into_iter());
 
-            if json.page >= json.pages {
-                break;
-            } else {
-                // otherwise next page
+            if json.page < json.pages {
                 filter.page = json.page + 1;
+            } else {
+                break;
             }
         }
 
@@ -412,13 +392,12 @@ impl Client {
 
     /// Get an export of an entry in a particular format.
     pub fn export_entry<T: Into<ID>>(&mut self, entry_id: T, fmt: Format) -> ClientResult<String> {
-        let data = self.smart_text_q(
+        self.smart_text_q(
             Method::GET,
             EndPoint::Export(entry_id.into(), fmt),
             UNIT,
             UNIT,
-        )?;
-        Ok(data)
+        )
     }
 
     /// Get a list of all tags for an entry by entry id.
@@ -494,6 +473,8 @@ impl Client {
     /// Also, labels aren't necessarily unique across a wallabag installation.
     /// The server should filter by tags belonging to a user in the same db
     /// query.
+    ///
+    /// Note: this allows deleting a tag with a comma by label.
     pub fn delete_tag_by_label<T: Into<String>>(&mut self, label: T) -> ClientResult<DeletedTag> {
         let mut params = HashMap::new();
         params.insert("tag".to_owned(), label.into());
@@ -509,32 +490,26 @@ impl Client {
     /// and the tag data on attempting to delete for innaccessible tags (tags by
     /// other users?).
     ///
-    /// WARNING: attempting to delete tags with a comma in them (eg. "some,tag")
-    /// will result in tags "some" and "tag" being deleted instead of "some,tag"
-    /// due to the way the api requires tags to be serialized. If you wish to
+    /// This method requires that tag names not contain commas. If you need to
     /// delete a tag containing a comma, use `delete_tag_by_label` instead.
     ///
-    /// TODO: prevent this bug from happening; check and encode in error.
-    ///
-    /// Returns a list of tags that were deleted.
-    pub fn delete_tags_by_label<T: Into<String>>(
+    /// Returns a list of tags that were deleted (sans IDs).
+    pub fn delete_tags_by_label(
         &mut self,
-        tags: Vec<T>,
+        tags: Vec<TagString>,
     ) -> ClientResult<Vec<DeletedTag>> {
         let mut params = HashMap::new();
         params.insert(
             "tags",
             tags.into_iter()
-                .map(|x| x.into())
+                .map(|x| x.to_string())
                 .collect::<Vec<String>>()
                 .join(","),
         );
 
         // note: api doesn't return tag ids and no way to obtain since deleted
         // by label
-        let json: Vec<DeletedTag> =
-            self.smart_json_q(Method::DELETE, EndPoint::TagsLabel, &params, UNIT)?;
-        Ok(json)
+        self.smart_json_q(Method::DELETE, EndPoint::TagsLabel, &params, UNIT)
     }
 
     /// Get the API version. Probably not useful because if the version isn't v2
@@ -545,14 +520,11 @@ impl Client {
 
     /// Get the currently logged in user information.
     pub fn get_user(&mut self) -> ClientResult<User> {
-        let user: User = self.smart_json_q(Method::GET, EndPoint::User, UNIT, UNIT)?;
-        Ok(user)
+        self.smart_json_q(Method::GET, EndPoint::User, UNIT, UNIT)
     }
 
     /// Register a user and create a client.
     pub fn register_user(&mut self, info: &RegisterInfo) -> ClientResult<NewlyRegisteredInfo> {
-        let info: NewlyRegisteredInfo =
-            self.json_q(Method::PUT, EndPoint::User, UNIT, info, false)?;
-        Ok(info)
+        self.json_q(Method::PUT, EndPoint::User, UNIT, info, false)
     }
 }

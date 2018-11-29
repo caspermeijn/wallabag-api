@@ -20,6 +20,6 @@ pub fn main() {
     // edit filter options here
     filter.order = SortOrder::Asc;
 
-    let res = client.get_entries_filtered(filter);
+    let res = client.get_entries_with_filter(filter);
     println!("{:#?}", res);
 }
