@@ -2,7 +2,9 @@ use std::env;
 use std::thread;
 use std::time::Duration;
 
-use wallabag_api::types::{Config, Entry, Format, NewAnnotation, PatchEntry, Range, RegisterInfo, TagString};
+use wallabag_api::types::{
+    Config, Entry, Format, NewAnnotation, PatchEntry, Range, RegisterInfo, TagString, ID,
+};
 use wallabag_api::Client;
 
 pub fn main() {
@@ -18,14 +20,13 @@ pub fn main() {
 
     let mut client = Client::new(config);
 
-    // let res = client.get_entry(1801067u32);
+    // let res = client.get_entry(1801067);
     // println!("{:#?}", res);
 
     // thread::sleep(Duration::from_secs(5));
 
     // let res = client.get_entry(1801067u32);
     // println!("{:#?}", res);
-
 
     // let entry = Entry {
     //     annotations: None,
@@ -110,7 +111,11 @@ pub fn main() {
     // let res = client.get_tags();
     // println!("{:#?}", res);
 
-    let res = client.delete_tags_by_label(vec![TagString::new("tag1").unwrap(), TagString::new("\"wat").unwrap(), TagString::new("tag2").unwrap()]);
+    let res = client.delete_tags_by_label(vec![
+        TagString::new("tag1").unwrap(),
+        TagString::new("\"wat").unwrap(),
+        TagString::new("tag2").unwrap(),
+    ]);
     println!("{:#?}", res);
 
     // let res = client.delete_tag_by_label("".to_owned());
@@ -194,7 +199,6 @@ pub fn main() {
     // );
     // println!("{:#?}", res);
 
-//     let res = client.get_user();
-//     println!("{:#?}", res);
-
+    //     let res = client.get_user();
+    //     println!("{:#?}", res);
 }
