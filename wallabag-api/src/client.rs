@@ -1,12 +1,12 @@
+//! Client
+
 // std libs
 use std::collections::HashMap;
-use std::sync::Mutex;
 
 // extern crates
 use reqwest::{self, Method, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
-use serde_json::{from_value, Value};
 
 // local imports
 use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, ResponseError};
@@ -493,7 +493,8 @@ impl Client {
     /// This method requires that tag names not contain commas. If you need to
     /// delete a tag containing a comma, use `delete_tag_by_label` instead.
     ///
-    /// Returns a list of tags that were deleted (sans IDs).
+    /// Returns a list of tags that were deleted (sans IDs). Returns 404 not
+    /// found _only_ if _all_ tags were not found.
     pub fn delete_tags_by_label(
         &mut self,
         tags: Vec<TagString>,

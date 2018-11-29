@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 
-use serde::Serializer;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::utils::serde::bool_to_int;
