@@ -3,6 +3,7 @@
 
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
+use diesel::connection::SimpleConnection;
 
 fn establish_connection() -> SqliteConnection {
     let database_url = "test.sqlite3";
@@ -19,8 +20,8 @@ fn establish_connection() -> SqliteConnection {
 //     }
 // }
 
-pub fn init_db() -> QueryResult<usize> {
-    let query = diesel::sql_query(include_str!("./sql/up-sqlite.sql"));
+pub fn init_db() -> QueryResult<()> {
+    let query = include_str!("./sql/up-sqlite.sql");
     let conn = establish_connection();
-    query.execute(&conn)
+    conn.batch_execute(query)
 }
