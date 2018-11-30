@@ -1,3 +1,5 @@
+begin;
+
 -- annotations (one-to-many) and tags (many-to-many) associated
 create table entries (
   id integer primary key not null,
@@ -13,12 +15,17 @@ create table entries (
   origin_url text,
   preview_picture text,
   published_at text, -- datetime
+  published_by text,  -- json array
   reading_time integer,
   starred_at text,  -- datetime
   title text,
   uid text,
   updated_at text not null, -- datetime
-  url text
+  url text,
+  headers text,
+  user_email text not null,
+  user_id integer not null,
+  user_name text not null
 );
 
 
@@ -37,25 +44,17 @@ create table tags (
   slug text not null
 );
 
--- has ranges associated (one-to-many)
 create table annotations (
   id integer primary key not null,
   annotator_schema_version text not null,
   created_at text not null, -- datetime
   quote text,
+  ranges text not null, -- json array
   text text not null, -- empty text represented with empty string
   updated_at text not null, -- datetime
   entry_id integer not null,
+  user text,
   foreign key (entry_id) references entries (id)
 );
 
-
-create table ranges (
-  id integer primary key not null,
-  start text,
-  end text,
-  start_offset integer not null,
-  end_offset integer not null,
-  annotation_id integer not null,
-  foreign key (annotation_id) references annotations (id)
-);
+commit;

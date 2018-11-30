@@ -13,6 +13,14 @@ repo).
 cargo doc --open -p wallabag-api
 ```
 
+Info from @j0k3r:
+
+> @swalladge uid in entries is used when you share the entry to the public. Instead of sharing the main ID of the entry to the world, we use an uuid.
+> url & origin_url are both the url of the content you saved. Usually they are the same but when you save a bit.ly link, it'll be in the origin_url and the resolved url of the shortlint will be in url
+> and the purpose of user info in entries is because we plan to share info between user in an instance. It's not yet available. No ETA too.
+
+TODO: use this info in api docs
+
 
 ## supported endpoints:
 

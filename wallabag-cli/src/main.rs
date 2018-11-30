@@ -1,9 +1,5 @@
 
-#[macro_use]
-extern crate diesel;
-
 mod backend;
-mod schema;
 
 use std::env;
 use std::fs::File;
