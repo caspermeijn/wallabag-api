@@ -12,4 +12,3 @@ serde = "*"
 serde_derive = "*"
 serde_json = "*"
 chrono = { version = "0.4", features = ["serde"] }
-diesel = "1.3"

@@ -8,7 +8,7 @@ use super::common::ID;
 pub type Tags = Vec<Tag>;
 
 /// Represents a tag from the api.
-#[derive(Queryable, Deserialize, PartialEq, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct Tag {
     pub id: ID,
     pub label: String,

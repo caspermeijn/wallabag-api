@@ -5,6 +5,9 @@ use std::collections::HashMap;
 
 use serde_derive::{Deserialize, Serialize};
 
+// TODO: decide how to implement PartialEq/Eq for types here. (eg on the whole
+// structs, or just by IDs?)
+
 mod annotations;
 mod common;
 mod entries_filter;
