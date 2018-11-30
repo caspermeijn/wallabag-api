@@ -48,12 +48,12 @@ create table annotations (
   id integer primary key not null,
   annotator_schema_version text not null,
   created_at text not null, -- datetime
-  quote text,
   ranges text not null, -- json array
   text text not null, -- empty text represented with empty string
   updated_at text not null, -- datetime
-  entry_id integer not null,
+  quote text,
   user text,
+  entry_id integer not null,
   foreign key (entry_id) references entries (id)
 );
 

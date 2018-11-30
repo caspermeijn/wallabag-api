@@ -10,5 +10,5 @@ edition = "2018"
 reqwest = "*"
 serde = "*"
 serde_derive = "*"
-serde_json = "*"
+serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }

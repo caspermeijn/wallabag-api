@@ -39,17 +39,15 @@ fn main() -> Result<(), failure::Error> {
 
     let matches = app.get_matches();
 
-    let db = Backend::new("db.sqlite3");
+    let backend = Backend::new("db.sqlite3");
 
     match matches.subcommand_name() {
         None => {
             println!("No subcommand given.");
-            let res = db.load_tags();
-            println!("{:#?}", res);
         }
         Some(INIT) => {
             println!("Initing the database...");
-            let res = db.up();
+            let res = backend.init();
             println!("{:#?}", res);
         }
         _ => {

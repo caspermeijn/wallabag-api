@@ -1,5 +1,8 @@
-use serde_derive::Deserialize;
+use std::error::Error;
+use std::fmt;
+
 use reqwest::StatusCode;
+use serde_derive::Deserialize;
 
 pub type ClientResult<T> = std::result::Result<T, ClientError>;
 
@@ -30,10 +33,18 @@ pub enum ClientError {
     Forbidden(ResponseCodeMessageError),
     ExpiredToken,
     UnexpectedJsonStructure, // eg returned valid json but didn't fit model
-    NotFound(ResponseCodeMessageError),  // 404
-    NotModified,  // 304
+    NotFound(ResponseCodeMessageError), // 404
+    NotModified,             // 304
     Other(StatusCode, String), // ¯\_(ツ)_/¯
 }
+
+impl fmt::Display for ClientError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", "¯\\_(ツ)_/¯")
+    }
+}
+
+impl Error for ClientError {}
 
 // TODO: extract reqwest errors and turn them into more useful ClientErrors
 
