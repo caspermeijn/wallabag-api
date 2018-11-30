@@ -12,7 +12,7 @@ use simplelog::WriteLogger;
 use wallabag_api::types::Config;
 use wallabag_api::Client;
 
-use crate::backend::init_db;
+use crate::backend::Backend;
 
 const INIT: &'static str = "init";
 
@@ -39,14 +39,18 @@ fn main() -> Result<(), failure::Error> {
 
     let matches = app.get_matches();
 
+    let db = Backend::new("db.sqlite3");
+
     match matches.subcommand_name() {
         None => {
             println!("No subcommand given.");
-            backend::load_tags();
+            let res = db.load_tags();
+            println!("{:#?}", res);
         }
         Some(INIT) => {
             println!("Initing the database...");
-            init_db()?;
+            let res = db.up();
+            println!("{:#?}", res);
         }
         _ => {
             // shrug

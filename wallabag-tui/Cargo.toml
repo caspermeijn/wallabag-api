@@ -10,6 +10,5 @@ termion = "1.5.1"
 failure = "0.1.3"
 log = "0.4"
 simplelog = "0.5.3"
-diesel = { version = "1.3", features = ["sqlite"] }
 
 wallabag-api = { path = "../wallabag-api" }

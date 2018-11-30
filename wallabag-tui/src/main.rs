@@ -1,4 +1,3 @@
-mod backend;
 mod event;
 
 use std::env;
