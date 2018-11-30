@@ -1,4 +1,9 @@
+
+#[macro_use]
+extern crate diesel;
+
 mod backend;
+mod schema;
 
 use std::env;
 use std::fs::File;
@@ -41,6 +46,7 @@ fn main() -> Result<(), failure::Error> {
     match matches.subcommand_name() {
         None => {
             println!("No subcommand given.");
+            backend::load_tags();
         }
         Some(INIT) => {
             println!("Initing the database...");

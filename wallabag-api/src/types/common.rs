@@ -4,7 +4,7 @@ use std::ops::Deref;
 use serde_derive::{Deserialize, Serialize};
 
 /// The type used as an ID for all data structures. Declared for clarity.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ID(pub u32);
 
 impl fmt::Display for ID {
