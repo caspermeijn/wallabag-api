@@ -100,6 +100,14 @@ impl From<Entry> for ID {
     }
 }
 
+/// This is implemented so that an &Entry can be used interchangably with an ID
+/// for some client methods. For convenience.
+impl From<&Entry> for ID {
+    fn from(entry: &Entry) -> Self {
+        entry.id
+    }
+}
+
 /// Internal struct for retrieving a list of entries from the api when
 /// paginated.
 #[derive(Deserialize, Debug)]

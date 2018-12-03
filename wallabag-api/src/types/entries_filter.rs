@@ -45,7 +45,7 @@ pub struct EntriesFilter {
     /// timestamp (in seconds) since when you want entries updated. This would
     /// be useful when implementing a sync method. Default is 0 (ie entries from
     /// the beginning of epoch).
-    pub since: u32,
+    pub since: u64,
 
     /// None = all entries; true/false = entries which do or do not have a public link
     pub public: Option<bool>,

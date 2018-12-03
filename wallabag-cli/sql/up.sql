@@ -22,10 +22,12 @@ create table entries (
   uid text,
   updated_at text not null, -- datetime
   url text,
-  headers text,
+  headers text,  -- json array
   user_email text not null,
   user_id integer not null,
-  user_name text not null
+  user_name text not null,
+
+  synced boolean not null -- whether changes have been uploaded yet
 );
 
 
@@ -41,7 +43,9 @@ create table taglinks (
 create table tags (
   id integer primary key not null,
   label text not null,
-  slug text not null
+  slug text not null,
+
+  synced boolean not null -- whether changes have been uploaded yet
 );
 
 create table annotations (
@@ -54,7 +58,23 @@ create table annotations (
   quote text,
   user text,
   entry_id integer not null,
+
+  synced boolean not null, -- whether changes have been uploaded yet
+
   foreign key (entry_id) references entries (id)
+);
+
+-- used to hold a single row with columns for each saved config value
+-- (this is config that isn't set by the user)
+create table config (
+  id integer primary key not null,
+  last_sync text not null -- datetime
+);
+
+
+insert into config values (
+  1,
+  "1970-01-01T00:00:00+00:00"
 );
 
 commit;

@@ -8,6 +8,7 @@ use std::io;
 use clap::{App, Arg, SubCommand};
 use log::{debug, error, info, warn};
 use simplelog::WriteLogger;
+use failure::Fallible;
 
 use wallabag_api::types::Config;
 use wallabag_api::Client;
@@ -15,8 +16,9 @@ use wallabag_api::Client;
 use crate::backend::Backend;
 
 const INIT: &'static str = "init";
+const SYNC: &'static str = "sync";
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Fallible<()> {
     // init logging
     WriteLogger::init(
         simplelog::LevelFilter::Debug,
@@ -35,7 +37,8 @@ fn main() -> Result<(), failure::Error> {
                 .help("Use a custom config file")
                 .takes_value(true),
         )
-        .subcommand(SubCommand::with_name(INIT).about("init the database"));
+        .subcommand(SubCommand::with_name(INIT).about("init the database"))
+        .subcommand(SubCommand::with_name(SYNC).about("bidirectional sync database with server"));
 
     let matches = app.get_matches();
 
@@ -48,6 +51,11 @@ fn main() -> Result<(), failure::Error> {
         Some(INIT) => {
             println!("Initing the database...");
             let res = backend.init();
+            println!("{:#?}", res);
+        }
+        Some(SYNC) => {
+            println!("Syncing with the server...");
+            let res = backend.sync();
             println!("{:#?}", res);
         }
         _ => {

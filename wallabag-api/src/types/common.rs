@@ -13,12 +13,20 @@ impl fmt::Display for ID {
     }
 }
 
+impl ID {
+    pub fn as_u32(&self) -> u32 {
+        self.0
+    }
+}
+
 /// For convenience.
 impl From<u32> for ID {
     fn from(x: u32) -> Self {
         ID(x)
     }
 }
+
+
 
 
 /// For convenience. Automatic type coercion means that an `&ID` can be passed
