@@ -37,9 +37,20 @@ impl Backend {
         Ok(())
     }
 
-    /// Sync between the database and server.
+    /// Full sync. Can be slow if many articles. This will also sync deletes.
     ///
-    /// Newest wins.
+    /// For entries and annotations existing in the database, object with latest
+    /// updated_at value wins.
+    pub fn full_sync(&self) -> Fallible<()> {
+        unimplemented!()
+    }
+
+    /// Normal sync. Syncs everything changed since the last sync, with the
+    /// exception of deleted entries and annotations (syncing deletes requires a
+    /// full sweep through everything).
+    ///
+    /// For entries and annotations existing in the database, object with latest
+    /// updated_at value wins.
     pub fn sync(&self) -> Fallible<()> {
         let config = Config {
             client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
@@ -52,56 +63,71 @@ impl Backend {
 
         let mut client = Client::new(config);
 
-        // sync tags first
+        // sync tags first.
+        // there are no updated-at timestamps attached, so just pull and save
+        // everything.
+        self.pull_tags(&mut client)?;
 
-        let tags = client.get_tags()?;
-        for tag in tags {
-            self.db.save_tag(&tag, true)?;
-        }
+        // TODO: push up seperate 'new tags' or 'tag edits' items
 
-        // then sync entries
+        // Then sync entries. Entries have tag links and annotations embedded.
         let mut filter = EntriesFilter::default();
         filter.since = self.db.get_last_sync()??.timestamp() as u64;
 
         let entries = client.get_entries_with_filter(filter)?;
 
+        // NOTE: changing tags on an entry touches updated_at
+
         for entry in entries.into_iter() {
             if let Some(saved_entry) = self.db.get_entry(entry.id.as_u32())? {
                 match saved_entry.updated_at.cmp(&entry.updated_at) {
                     Less => {
-                        self.db.save_entry(&entry, true)?;
-                        if let Some(ref anns) = entry.annotations {
-                            for ann in anns {
-                                self.db.save_annotation(ann, &entry, true)?;
-                            }
-                        }
-
-                        // TODO: tags support
-                        println!("upsert");
+                        self.pull_entry(entry)?;
                     }
                     Equal => {
                         // noop; already synced and same version
                     }
                     Greater => {
-                        // TODO: db is newer; update
-                        println!("need to sync to server");
+                        // local entry is newer, push to server
+                        client.update_entry(saved_entry.id, &(&saved_entry).into())?;
+                        // TODO: handle annonations for entry
                     }
                 }
             } else {
-                self.db.save_entry(&entry, true)?;
-                if let Some(ref anns) = entry.annotations {
-                    for ann in anns {
-                        self.db.save_annotation(&ann, &entry, true)?;
-                    }
-                }
-                println!("upsert");
+                self.pull_entry(entry)?;
             }
         }
 
         // finally sync up unsynced things;
+        // TODO
 
-        self.db.update_last_sync()?;
+        // touch the last sync time ready for next sync
+        self.db.touch_last_sync()?;
 
+        Ok(())
+    }
+
+    /// save an entry to the database where the entry has been determined to be
+    /// newer than any in the database, but still need to do bidirectional sync
+    /// for associated annotations and tags
+    fn pull_entry(&self, entry: Entry) -> Fallible<()> {
+        self.db.save_entry(&entry, true)?;
+        if let Some(ref anns) = entry.annotations {
+            for ann in anns {
+                self.db.save_annotation(ann, &entry, true)?;
+            }
+        }
+
+        // TODO: tags support
+
+        Ok(())
+    }
+
+    fn pull_tags(&self, client: &mut Client) -> Fallible<()> {
+        let tags = client.get_tags()?;
+        for tag in tags {
+            self.db.save_tag(&tag, true)?;
+        }
         Ok(())
     }
 }

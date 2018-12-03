@@ -62,11 +62,74 @@ impl DB {
         self.conn()?.execute_batch(query)
     }
 
-    pub fn get_entry<T: Into<ID>>(&self, id: T) -> SQLResult<Option<Entry>> {
+    pub fn get_entry<T: Into<ID>>(&self, id: T) -> Fallible<Option<Entry>> {
         // TODO: for entry by id, set up so that returns None if not found
-        Ok(None)
+        let conn = self.conn()?;
+
+        // query and display the tags
+        let mut stmt = conn.prepare(
+            r#"select id, content, created_at, domain_name, http_status,
+            is_archived, is_public, is_starred, language, mimetype, origin_url,
+            preview_picture, published_at, published_by, reading_time,
+            starred_at, title, uid, updated_at, url, headers, user_email,
+            user_id, user_name from entries where id = ?"#,
+        )?;
+
+        let mut results = stmt.query_map(&[&id.into().as_u32()], |row| -> Fallible<Entry> {
+            Ok(Entry {
+                id: ID(row.get(0)),
+                content: row.get(1),
+                created_at: DateTime::parse_from_rfc3339(&row.get::<usize, String>(2))
+                    .map(|dt| dt.with_timezone(&Utc))?,
+                domain_name: row.get(3),
+                http_status: row.get(4),
+                is_archived: row.get(5),
+                is_public: row.get(6),
+                is_starred: row.get(7),
+                language: row.get(8),
+                mimetype: row.get(9),
+                origin_url: row.get(10),
+                preview_picture: row.get(11),
+                published_at: extract_result(row.get::<usize, Option<String>>(12).map(|row| {
+                    DateTime::parse_from_rfc3339(&row).map(|dt| dt.with_timezone(&Utc))
+                }))?,
+                published_by: extract_result(
+                    row.get::<usize, Option<String>>(13)
+                        .map(|row| serde_json::from_str::<Vec<String>>(&row)),
+                )?,
+                reading_time: row.get(14),
+                starred_at: extract_result(row.get::<usize, Option<String>>(15).map(|row| {
+                    DateTime::parse_from_rfc3339(&row).map(|dt| dt.with_timezone(&Utc))
+                }))?,
+                title: row.get(16),
+                uid: row.get(17),
+                updated_at: DateTime::parse_from_rfc3339(&row.get::<usize, String>(18))
+                    .map(|dt| dt.with_timezone(&Utc))?,
+                url: row.get(19),
+                headers: extract_result(
+                    row.get::<usize, Option<String>>(20)
+                        .map(|row| serde_json::from_str::<Vec<String>>(&row)),
+                )?,
+                user_email: row.get(21),
+                user_id: ID(row.get(22)),
+                user_name: row.get(23),
+                // TODO: load annotations and tags here?
+                annotations: None,
+                tags: vec![],
+            })
+        })?;
+
+        match results.next() {
+            Some(thing) => match thing {
+                Ok(err_entry) => Ok(Some(err_entry?)),
+                Err(e) => Err(e.into()),
+            },
+            None => Ok(None),
+        }
     }
 
+    /// get the last time a sync was performed. used for optimization by the
+    /// backend
     pub fn get_last_sync(&self) -> SQLResult<chrono::ParseResult<DateTime<Utc>>> {
         self.conn()?.query_row(
             "SELECT (last_sync) from config where id = 1",
@@ -79,7 +142,7 @@ impl DB {
     }
 
     /// Sets the last sync time to now.
-    pub fn update_last_sync(&self) -> SQLResult<()> {
+    pub fn touch_last_sync(&self) -> SQLResult<()> {
         self.conn()?
             .execute(
                 "UPDATE config SET last_sync = ? where id = 1",
@@ -90,7 +153,7 @@ impl DB {
 
     /// Save an entry to the database. If not existing (by id), it will be
     /// inserted; if existing, it will replace the old value.
-    pub fn save_entry(&self, entry: &Entry, synced: bool) -> SQLResult<()> {
+    pub fn save_entry(&self, entry: &Entry, synced: bool) -> Fallible<()> {
         let conn = self.conn()?;
 
         conn.execute(
@@ -116,21 +179,29 @@ impl DB {
                 &entry.origin_url,
                 &entry.preview_picture,
                 &entry.published_at.map(|dt| dt.to_rfc3339()),
-                &serde_json::ser::to_string(&entry.published_by).unwrap(),
+                &extract_result(match entry.published_by {
+                    None => None,
+                    Some(ref x) => Some(serde_json::to_string(x)),
+                })?,
                 &entry.reading_time,
                 &entry.starred_at.map(|dt| dt.to_rfc3339()),
                 &entry.title,
                 &entry.uid,
                 &entry.updated_at.to_rfc3339(),
                 &entry.url,
-                &serde_json::ser::to_string(&entry.headers).unwrap(),
+                &extract_result(match entry.headers {
+                    None => None,
+                    Some(ref x) => Some(serde_json::to_string(x)),
+                })?,
                 &entry.user_email,
                 &entry.user_id.as_u32(),
                 &entry.user_name,
                 &synced,
             ],
         )
-        .map(|i| ())
+        .map(|i| ())?;
+
+        Ok(())
     }
 
     /// Save an annotation to the database. If not existing (by id), it will be
@@ -140,7 +211,7 @@ impl DB {
         ann: &Annotation,
         entry_id: T,
         synced: bool,
-    ) -> SQLResult<()> {
+    ) -> Fallible<()> {
         let conn = self.conn()?;
 
         conn.execute(
@@ -153,7 +224,7 @@ impl DB {
                 &*ann.id as &ToSql,
                 &ann.annotator_schema_version,
                 &ann.created_at.to_rfc3339(),
-                &serde_json::ser::to_string(&ann.ranges).unwrap(),
+                &serde_json::ser::to_string(&ann.ranges)?,
                 &ann.text,
                 &ann.updated_at.to_rfc3339(),
                 &ann.quote,
@@ -161,10 +232,14 @@ impl DB {
                 &*entry_id.into(),
                 &synced,
             ],
-        )
-        .map(|i| ())
+        )?;
+
+        Ok(())
     }
 
+    /// `synced` is whether or not any changes have been synced to the server. A
+    /// sync method in the backend should set this to true, but other local
+    /// actions should set this to false.
     pub fn save_tag(&self, tag: &Tag, synced: bool) -> SQLResult<()> {
         self.conn()?
             .execute(
@@ -196,5 +271,13 @@ impl DB {
         }
 
         Ok(())
+    }
+}
+
+fn extract_result<T, U>(x: Option<Result<T, U>>) -> Result<Option<T>, U> {
+    match x {
+        Some(Ok(t)) => Ok(Some(t)),
+        Some(Err(e)) => Err(e),
+        None => Ok(None),
     }
 }
