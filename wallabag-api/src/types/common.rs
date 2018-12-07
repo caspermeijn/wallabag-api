@@ -4,7 +4,7 @@ use std::ops::Deref;
 use serde_derive::{Deserialize, Serialize};
 
 /// The type used as an ID for all data structures. Declared for clarity.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ID(pub u32);
 
 impl fmt::Display for ID {
@@ -26,9 +26,6 @@ impl From<u32> for ID {
     }
 }
 
-
-
-
 /// For convenience. Automatic type coercion means that an `&ID` can be passed
 /// as an argument to a function that takes a `u32`. Hopefully will make it easier
 /// to work with `ID` values in the structs.
@@ -39,7 +36,6 @@ impl Deref for ID {
         &self.0
     }
 }
-
 
 #[cfg(test)]
 mod tests {

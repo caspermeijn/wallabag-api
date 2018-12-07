@@ -1,6 +1,6 @@
 use std::fmt;
 
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 
 use super::common::ID;
 
@@ -8,7 +8,7 @@ use super::common::ID;
 pub type Tags = Vec<Tag>;
 
 /// Represents a tag from the api.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Tag {
     pub id: ID,
     pub label: String,

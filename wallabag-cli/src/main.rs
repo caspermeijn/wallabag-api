@@ -1,4 +1,3 @@
-
 mod backend;
 
 use std::env;
@@ -6,9 +5,9 @@ use std::fs::File;
 use std::io;
 
 use clap::{App, Arg, SubCommand};
+use failure::Fallible;
 use log::{debug, error, info, warn};
 use simplelog::WriteLogger;
-use failure::Fallible;
 
 use wallabag_api::types::Config;
 use wallabag_api::Client;
@@ -17,6 +16,7 @@ use crate::backend::Backend;
 
 const INIT: &'static str = "init";
 const SYNC: &'static str = "sync";
+const TAGS: &'static str = "tags";
 
 fn main() -> Fallible<()> {
     // init logging
@@ -38,7 +38,16 @@ fn main() -> Fallible<()> {
                 .takes_value(true),
         )
         .subcommand(SubCommand::with_name(INIT).about("init the database"))
-        .subcommand(SubCommand::with_name(SYNC).about("bidirectional sync database with server"));
+        .subcommand(
+            SubCommand::with_name(SYNC)
+                .about("bidirectional sync database with server")
+                .arg(
+                    Arg::with_name("full")
+                        .long("full")
+                        .help("Perform a full sync (slow)."),
+                ),
+        )
+        .subcommand(SubCommand::with_name(TAGS).about("Display a list of tags"));
 
     let matches = app.get_matches();
 
@@ -54,9 +63,22 @@ fn main() -> Fallible<()> {
             println!("{:#?}", res);
         }
         Some(SYNC) => {
-            println!("Syncing with the server...");
-            let res = backend.sync();
-            println!("{:#?}", res);
+            let sync_matches = matches.subcommand_matches(SYNC).unwrap();
+            if sync_matches.is_present("full") {
+                println!("Running a full sync.");
+                backend.full_sync()?;
+            } else {
+                println!("Running a normal sync.");
+                backend.sync()?;
+            }
+        }
+        Some(TAGS) => {
+            let mut tags = backend.tags()?;
+            tags.sort_unstable_by(|left, right| left.label.cmp(&right.label));
+
+            for tag in tags {
+                println!("{}", tag.label);
+            }
         }
         _ => {
             // shrug

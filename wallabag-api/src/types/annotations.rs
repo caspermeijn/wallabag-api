@@ -11,14 +11,30 @@ pub type Annotations = Vec<Annotation>;
 /// Represents an annotation as returned from the api.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Annotation {
+    pub id: ID,
     pub annotator_schema_version: String,
     pub created_at: DateTime<Utc>,
-    pub id: ID,
     pub quote: Option<String>,
     pub ranges: Vec<Range>,
     pub text: String,
     pub updated_at: DateTime<Utc>,
     pub user: Option<String>,
+}
+
+/// This is implemented so that an Annotation can be used interchangably with an ID
+/// for some client methods. For convenience.
+impl From<Annotation> for ID {
+    fn from(ann: Annotation) -> Self {
+        ann.id
+    }
+}
+
+/// This is implemented so that an &Annotation can be used interchangably with an ID
+/// for some client methods. For convenience.
+impl From<&Annotation> for ID {
+    fn from(ann: &Annotation) -> Self {
+        ann.id
+    }
 }
 
 /// Intermediary struct for deserializing a list of annotations.

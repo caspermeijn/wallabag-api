@@ -23,6 +23,7 @@ create table entries (
   updated_at text not null, -- datetime
   url text,
   headers text,  -- json array
+  tags text not null,  -- json array
   user_email text not null,
   user_id integer not null,
   user_name text not null,
