@@ -11,9 +11,15 @@ use rusqlite::{Connection, Row, NO_PARAMS};
 use serde_json;
 
 use wallabag_api::types::{
-    Annotation, Annotations, Config, Entries, EntriesFilter, Entry, Range, Tag, Tags, ID,
+    Annotation, Annotations, Config, Entries, EntriesFilter, Entry, NewAnnotation, Range, Tag,
+    Tags, ID,
 };
 use wallabag_api::Client;
+
+pub struct DbNewUrl {
+    pub id: i64,
+    pub url: String,
+}
 
 pub struct DB {
     db_file: PathBuf,
@@ -88,21 +94,54 @@ impl DB {
         }
     }
 
-    pub fn get_unsynced_annotations(&self) -> Fallible<Annotations> {
+    pub fn get_annotations_since(&self, since: DateTime<Utc>) -> Fallible<Annotations> {
         let conn = self.conn()?;
 
         // query and display the tags
         let mut stmt = conn.prepare(
             r#"select id, annotator_schema_version, created_at, ranges, text,
-            updated_at, quote, user from annotations where synced = 0"#,
+            updated_at, quote, user from annotations where updated_at >= ?"#,
         )?;
 
-        let mut results = stmt.query_map(NO_PARAMS, row_to_ann)?;
+        let mut results = stmt.query_map(&[since.to_rfc3339()], row_to_ann)?;
 
         results.flatten().collect::<Fallible<Annotations>>()
     }
 
-    pub fn get_unsynced_entries(&self) -> Fallible<Entries> {
+    pub fn get_new_annotations(&self) -> Fallible<Vec<(ID, i64, NewAnnotation)>> {
+        let conn = self.conn()?;
+
+        // query and display the tags
+        let mut stmt =
+            conn.prepare("SELECT id, quote, ranges, text, entry_id from new_annotations")?;
+
+        let mut results = stmt.query_map(NO_PARAMS, |row| {
+            Ok((
+                ID(row.get(4)),
+                row.get(0),
+                NewAnnotation {
+                    quote: row.get(1),
+                    ranges: serde_json::from_str::<Vec<Range>>(&row.get::<usize, String>(2))?,
+                    text: row.get(3),
+                },
+            ))
+        })?;
+
+        // TODO: does flatten hide Err because it just doesn't iterate over them?
+        results
+            .flatten()
+            .collect::<Fallible<Vec<(ID, i64, NewAnnotation)>>>()
+    }
+
+    /// Remove a new annotation entry from db, signifying that it has been synced.
+    pub fn remove_new_annotation(&self, id: i64) -> Fallible<()> {
+        self.conn()?
+            .execute("DELETE FROM new_annotations WHERE id = ?", &[&id])?;
+
+        Ok(())
+    }
+
+    pub fn get_entries_since(&self, since: DateTime<Utc>) -> Fallible<Entries> {
         let conn = self.conn()?;
 
         // query and display the tags
@@ -111,12 +150,73 @@ impl DB {
             is_archived, is_public, is_starred, language, mimetype, origin_url,
             preview_picture, published_at, published_by, reading_time,
             starred_at, title, uid, updated_at, url, headers, user_email,
-            user_id, user_name, tags from entries WHERE synced = 0"#,
+            user_id, user_name, tags from entries WHERE updated_at >= ?"#,
         )?;
 
-        let mut results = stmt.query_map(NO_PARAMS, row_to_entry)?;
+        let mut results = stmt.query_map(&[since.to_rfc3339()], row_to_entry)?;
 
         results.flatten().collect::<Fallible<Entries>>()
+    }
+
+    pub fn get_new_urls(&self) -> Fallible<Vec<DbNewUrl>> {
+        let conn = self.conn()?;
+
+        // query and display the tags
+        let mut stmt = conn.prepare("SELECT id, url FROM new_urls")?;
+        let mut results = stmt.query_map(NO_PARAMS, |row| DbNewUrl {
+            id: row.get(0),
+            url: row.get(1),
+        })?;
+
+        Ok(results.collect::<SQLResult<Vec<DbNewUrl>>>()?)
+    }
+
+    /// Remove a new url entry from the db, signifying that it has been successfully synced.
+    pub fn remove_new_url(&self, id: i64) -> Fallible<()> {
+        self.conn()?
+            .execute("DELETE FROM new_urls WHERE id = ?", &[&id])?;
+
+        Ok(())
+    }
+
+    pub fn get_annotation_deletes(&self) -> Fallible<Vec<ID>> {
+        let conn = self.conn()?;
+
+        // query and display the tags
+        let mut stmt = conn.prepare("SELECT id FROM deleted_annotations")?;
+        let mut results = stmt.query_map(NO_PARAMS, |row| ID(row.get(0)))?;
+
+        Ok(results.collect::<SQLResult<Vec<ID>>>()?)
+    }
+
+    /// Remove an annotation from the delteed entries table. This marks a local delete as synced.
+    pub fn remove_delete_annotation<T: Into<ID>>(&self, annotation_id: T) -> Fallible<()> {
+        self.conn()?.execute(
+            "DELETE FROM deleted_annotations WHERE id = ?",
+            &[&annotation_id.into().as_u32()],
+        )?;
+
+        Ok(())
+    }
+
+    pub fn get_entry_deletes(&self) -> Fallible<Vec<ID>> {
+        let conn = self.conn()?;
+
+        // query and display the tags
+        let mut stmt = conn.prepare("SELECT id FROM deleted_entries")?;
+        let mut results = stmt.query_map(NO_PARAMS, |row| ID(row.get(0)))?;
+
+        Ok(results.collect::<SQLResult<Vec<ID>>>()?)
+    }
+
+    /// Remove an entry from the delteed entries table. This marks a local delete as synced.
+    pub fn remove_delete_entry<T: Into<ID>>(&self, entry_id: T) -> Fallible<()> {
+        self.conn()?.execute(
+            "DELETE FROM deleted_entries WHERE id = ?",
+            &[&entry_id.into().as_u32()],
+        )?;
+
+        Ok(())
     }
 
     pub fn get_entry<T: Into<ID>>(&self, id: T) -> Fallible<Option<Entry>> {
@@ -165,17 +265,7 @@ impl DB {
         Ok(())
     }
 
-    /// Records that an entry has been synced
-    pub fn set_sync_entry<T: Into<ID>>(&self, entry_id: T) -> Fallible<()> {
-        self.conn()?.execute(
-            "UPDATE entries SET synced = true WHERE id = ?",
-            &[&entry_id.into().as_u32()],
-        )?;
-
-        Ok(())
-    }
-
-    /// Records that an entry has been synced
+    ///
     pub fn drop_tag_links_for_entry<T: Into<ID>>(&self, entry_id: T) -> Fallible<()> {
         self.conn()?.execute(
             "DELETE FROM taglinks WHERE entry_id = ?",
@@ -185,19 +275,9 @@ impl DB {
         Ok(())
     }
 
-    /// Records that an annotation has been synced
-    pub fn set_sync_annotation<T: Into<ID>>(&self, ann_id: T) -> Fallible<()> {
-        self.conn()?.execute(
-            "UPDATE annotations SET synced = true where id = ?",
-            &[&ann_id.into().as_u32()],
-        )?;
-
-        Ok(())
-    }
-
     /// Save an entry to the database. If not existing (by id), it will be
     /// inserted; if existing, it will replace the old value.
-    pub fn save_entry(&self, entry: &Entry, synced: bool) -> Fallible<()> {
+    pub fn save_entry(&self, entry: &Entry) -> Fallible<()> {
         let conn = self.conn()?;
 
         conn.execute(
@@ -206,8 +286,8 @@ impl DB {
             is_public, is_starred, language, mimetype, origin_url,
             preview_picture, published_at, published_by, reading_time,
             starred_at, title, uid, updated_at, url, headers, user_email,
-            user_id, user_name, tags, synced) VALUES
-             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            user_id, user_name, tags) VALUES
+             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
             &[
                 &*entry.id as &ToSql,
@@ -241,7 +321,6 @@ impl DB {
                 &entry.user_id.as_u32(),
                 &entry.user_name,
                 &serde_json::to_string(&entry.tags)?,
-                &synced,
             ],
         )
         .map(|i| ())?;
@@ -251,19 +330,14 @@ impl DB {
 
     /// Save an annotation to the database. If not existing (by id), it will be
     /// inserted; if existing, it will replace the old value.
-    pub fn save_annotation<T: Into<ID>>(
-        &self,
-        ann: &Annotation,
-        entry_id: T,
-        synced: bool,
-    ) -> Fallible<()> {
+    pub fn save_annotation<T: Into<ID>>(&self, ann: &Annotation, entry_id: T) -> Fallible<()> {
         let conn = self.conn()?;
 
         conn.execute(
             r#"INSERT OR REPLACE INTO annotations
             (id, annotator_schema_version, created_at, ranges, text, updated_at,
-            quote, user, entry_id, synced) VALUES
-             (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+            quote, user, entry_id) VALUES
+             (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
             "#,
             &[
                 &*ann.id as &ToSql,
@@ -275,26 +349,17 @@ impl DB {
                 &ann.quote,
                 &ann.user,
                 &*entry_id.into(),
-                &synced,
             ],
         )?;
 
         Ok(())
     }
 
-    /// `synced` is whether or not any changes have been synced to the server. A
-    /// sync method in the backend should set this to true, but other local
-    /// actions should set this to false.
-    pub fn save_tag(&self, tag: &Tag, synced: bool) -> SQLResult<()> {
+    pub fn save_tag(&self, tag: &Tag) -> SQLResult<()> {
         self.conn()?
             .execute(
-                "INSERT OR REPLACE INTO tags (id, label, slug, synced) VALUES (?1, ?2, ?3, ?4)",
-                &[
-                    &tag.id.to_string() as &ToSql,
-                    &tag.label,
-                    &tag.slug,
-                    &synced,
-                ],
+                "INSERT OR REPLACE INTO tags (id, label, slug) VALUES (?1, ?2, ?3)",
+                &[&tag.id.to_string() as &ToSql, &tag.label, &tag.slug],
             )
             .map(|i| ())
     }
@@ -302,15 +367,22 @@ impl DB {
     pub fn save_tag_link<T: Into<ID>>(&self, entry_id: T, tag: &Tag) -> Fallible<()> {
         self.conn()?
             .execute(
-                "INSERT OR REPLACE INTO taglinks (tag_id, entry_id) VALUES (?1, ?2)",
+                "INSERT OR REPLACE INTO taglinks (entry_id, tag_id) VALUES (?1, ?2)",
                 &[&entry_id.into().as_u32() as &ToSql, &tag.id.as_u32()],
             )
             .map(|i| ())?;
+        Ok(())
+    }
+
+    /// delete all tags with no taglinks entries
+    pub fn delete_unused_tags(&self) -> Fallible<()> {
+        self.conn()?
+            .execute("DELETE FROM tags WHERE NOT EXISTS (SELECT taglinks.tag_id FROM taglinks WHERE tags.id = taglinks.tag_id)", NO_PARAMS)?;
 
         Ok(())
     }
 
-    ///
+    /// get all tags from the db
     pub fn get_tags(&self) -> Fallible<Tags> {
         let conn = self.conn()?;
 
@@ -323,7 +395,7 @@ impl DB {
             slug: row.get(2),
         })?;
 
-        Ok(results.flatten().collect::<Tags>())
+        Ok(results.collect::<SQLResult<Tags>>()?)
     }
 }
 

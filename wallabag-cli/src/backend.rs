@@ -4,6 +4,7 @@
 mod db;
 
 use std::cmp::Ordering::{Equal, Greater, Less};
+use std::collections::HashSet;
 use std::env;
 use std::path::PathBuf;
 use std::result::Result;
@@ -15,10 +16,10 @@ use rusqlite::Result as SQLResult;
 use rusqlite::{Connection, NO_PARAMS};
 use serde_json;
 
-use wallabag_api::types::{Annotation, Config, EntriesFilter, Entry, Tag, Tags, ID};
+use wallabag_api::types::{Annotation, Config, NewEntry, EntriesFilter, Entry, Tag, Tags, ID};
 use wallabag_api::Client;
 
-use self::db::DB;
+use self::db::{DB, DbNewUrl};
 
 pub struct Backend {
     db: DB,
@@ -77,22 +78,32 @@ impl Backend {
 
         let mut client = Client::new(config);
 
-        // sync tags first.
-        // there are no updated-at timestamps attached, so just pull and save
-        // everything. We don't want to allow editing tags offline?
-        self.pull_tags(&mut client)?;
-
-        // Then sync entries. Entries have tag links and annotations embedded.
+        // Sync entries recently updated server-side. Entries have tag links and annotations embedded.
         let mut filter = EntriesFilter::default();
         let since = self.db.get_last_sync()??;
         filter.since = since.timestamp() as u64;
-
         let entries = client.get_entries_with_filter(filter)?;
+
+        // used when syncing up locally updated entries/annotations to avoid syncing twice
+        let seen_entries: HashSet<ID> = entries.iter().map(|e| e.id).collect();
+        let tmp_empty_vec = vec![];
+        let seen_annotations: HashSet<ID> = entries
+            .iter()
+            .map(|e| {
+                e.annotations
+                    .as_ref()
+                    .unwrap_or(&tmp_empty_vec)
+                    .iter()
+                    .map(|a| a.id)
+            })
+            .flatten()
+            .collect();
 
         // NOTE: changing tags on an entry touches updated_at. To add a tag
         // locally, create a new tag object with an arbitrary `slug` and `id`,
         // add it to the Entry object, and save to db. taglinks and tags table
         // will be updated in next sync.
+        // NOTE: changing an annotation does not update entry updated_at
 
         // NOTE: this will not get annotations where annotation has been updated recently but not
         // the associated entry
@@ -109,8 +120,10 @@ impl Backend {
                     }
                     Greater => {
                         // local entry is newer, push to server
-                        client.update_entry(saved_entry.id, &(&saved_entry).into())?;
-                        self.db.set_sync_entry(saved_entry)?;
+                        let updated_entry =
+                            client.update_entry(saved_entry.id, &(&saved_entry).into())?;
+                        // run pull entry on the entry returned to sync any new tags
+                        self.pull_entry(&mut client, updated_entry)?;
                     }
                 }
             } else {
@@ -118,37 +131,46 @@ impl Backend {
             }
         }
 
-        for entry in self.db.get_unsynced_entries()?.into_iter() {
-            // push, since it's still marked as unsynced and has been updated
-            // since previous sync
-            if entry.updated_at > since {
+        // Update all locally-recently-updated entries and annotations that weren't touched
+        // previously.
+        for entry in self.db.get_entries_since(since)?.into_iter() {
+            if !seen_entries.contains(&entry.id) {
                 client.update_entry(entry.id, &(&entry).into())?;
-                self.db.set_sync_entry(entry)?;
             }
-            // TODO: otherwise, what does this mean?
         }
 
-
-        for ann in self.db.get_unsynced_annotations()?.into_iter() {
-            // push, since it's still marked as unsynced and has been updated
-            // since previous sync
-            if ann.updated_at > since {
+        for ann in self.db.get_annotations_since(since)?.into_iter() {
+            if !seen_annotations.contains(&ann.id) {
                 client.update_annotation(&ann)?;
-                self.db.set_sync_annotation(ann)?;
             }
-            // TODO: if not, what does this mean?
         }
 
-        // TODO: track and sync client-side deletes. This would need a new table to save deleted
-        // items in or save its status in the existing table (eg. rename `synced` to `status` and
-        // allow an enum (synced, deleted, unsynced...), and would require pinging the server to
-        // see if the server-side object has been updated since the local delete.
-
+        // track and sync client-side deletes.
+        for entry_id in self.db.get_entry_deletes()? {
+            client.delete_entry(entry_id)?;
+            self.db.remove_delete_entry(entry_id)?;
+        }
+        for annotation_id in self.db.get_annotation_deletes()? {
+            client.delete_annotation(annotation_id)?;
+            self.db.remove_delete_annotation(annotation_id)?;
+        }
 
         // finally push new things to the server
-        // TODO: add new tables to track these and code to push
+        for DbNewUrl { id: id, url: url } in self.db.get_new_urls()? {
+            let new_entry = NewEntry::new_with_url(url);
+            let entry = client.create_entry(&new_entry)?;
+            self.pull_entry(&mut client, entry)?;
+            self.db.remove_new_url(id)?;
+        }
 
+        for (entry_id, new_ann_id, new_ann) in self.db.get_new_annotations()? {
+            let ann = client.create_annotation(entry_id, new_ann)?;
+            self.db.save_annotation(&ann, entry_id)?;
+            self.db.remove_new_annotation(new_ann_id);
+        }
 
+        // last of all drop tags with no tag_links
+        self.db.delete_unused_tags()?;
 
         // Touch the last sync time ready for next sync.
         // This must be done last to ensure the sync has successfully completed.
@@ -161,7 +183,7 @@ impl Backend {
     /// newer than any in the database, but still need to do bidirectional sync
     /// for associated annotations and tags
     fn pull_entry(&self, client: &mut Client, entry: Entry) -> Fallible<()> {
-        self.db.save_entry(&entry, true)?;
+        self.db.save_entry(&entry)?;
 
         if let Some(ref anns) = entry.annotations {
             for ann in anns {
@@ -169,9 +191,10 @@ impl Backend {
             }
         }
 
-        // pull tags
+        // rebuild tag links
         self.db.drop_tag_links_for_entry(&entry)?;
         for tag in entry.tags.iter() {
+            self.db.save_tag(tag)?;
             self.db.save_tag_link(&entry, tag)?;
         }
 
@@ -190,29 +213,21 @@ impl Backend {
             match Ord::cmp(&saved_ann.updated_at, &ann.updated_at) {
                 Less => {
                     // saved annotation is older than pulled version; overwrite
-                    self.db.save_annotation(ann, entry_id, true)?;
+                    self.db.save_annotation(ann, entry_id)?;
                 }
                 Equal => {
                     // noop; already synced and same version
                 }
                 Greater => {
                     // local annotation is newer, push to server
-                    client.update_annotation(&saved_ann)?;
-                    self.db.set_sync_annotation(saved_ann)?;
+                    let updated_ann = client.update_annotation(&saved_ann)?;
+                    self.db.save_annotation(&updated_ann, entry_id)?;
                 }
             }
         } else {
-            self.db.save_annotation(ann, entry_id, true)?;
+            self.db.save_annotation(ann, entry_id)?;
         }
 
-        Ok(())
-    }
-
-    fn pull_tags(&self, client: &mut Client) -> Fallible<()> {
-        let tags = client.get_tags()?;
-        for tag in tags {
-            self.db.save_tag(&tag, true)?;
-        }
         Ok(())
     }
 }
