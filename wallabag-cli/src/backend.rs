@@ -99,7 +99,7 @@ impl Backend {
         for entry in entries.into_iter() {
             // first check if existing entry with same id
             if let Some(saved_entry) = self.db.get_entry(entry.id.as_u32())? {
-                match saved_entry.updated_at.cmp(&entry.updated_at) {
+                match Ord::cmp(&saved_entry.updated_at, &entry.updated_at) {
                     Less => {
                         // saved entry is older than pulled version; overwrite
                         self.pull_entry(&mut client, entry)?;
@@ -179,7 +179,7 @@ impl Backend {
     ) -> Fallible<()> {
         let entry_id = entry_id.into().as_u32();
         if let Some(saved_ann) = self.db.get_annotation(ann.id.as_u32())? {
-            match saved_ann.updated_at.cmp(&ann.updated_at) {
+            match Ord::cmp(&saved_ann.updated_at, &ann.updated_at) {
                 Less => {
                     // saved annotation is older than pulled version; overwrite
                     self.db.save_annotation(ann, entry_id, true)?;
