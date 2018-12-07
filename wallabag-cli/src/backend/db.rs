@@ -26,8 +26,11 @@ impl DB {
         }
     }
 
+    /// opens a new connection to the db, turns on foreign keys support, and returns the connection
     fn conn(&self) -> SQLResult<Connection> {
-        Connection::open(&self.db_file)
+        let conn = Connection::open(&self.db_file)?;
+        conn.execute("PRAGMA foreign_keys = ON", NO_PARAMS)?;
+        Ok(conn)
     }
 
     /// Reset the database to a clean state. Database file will be created if
@@ -307,7 +310,7 @@ impl DB {
         Ok(())
     }
 
-    /// 
+    ///
     pub fn get_tags(&self) -> Fallible<Tags> {
         let conn = self.conn()?;
 

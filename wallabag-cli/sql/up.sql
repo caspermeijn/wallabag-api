@@ -35,8 +35,8 @@ create table entries (
 create table taglinks (
   tag_id integer not null,
   entry_id integer not null,
-  foreign key (tag_id) references tags (id),
-  foreign key (entry_id) references entries (id),
+  foreign key (tag_id) references tags (id) on delete cascade,
+  foreign key (entry_id) references entries (id) on delete cascade,
   primary key (tag_id, entry_id)
 );
 
@@ -62,8 +62,39 @@ create table annotations (
 
   synced boolean not null, -- whether changes have been uploaded yet
 
-  foreign key (entry_id) references entries (id)
+  foreign key (entry_id) references entries (id) on delete cascade
 );
+
+create index annotations_entry_id on annotations (entry_id);
+
+-- tables to hold temporary ids of locally deleted entries; should be deleted
+-- after sync
+create table deleted_entries (
+  id integer primary key not null,
+)
+
+create table deleted_annotations (
+  id integer primary key not null,
+)
+
+create table deleted_tags (
+  id integer primary key not null,
+)
+
+-- to manage adding new things offline; items in new_* should be deleted after synced
+create table new_urls (
+  url text not null,
+)
+
+create table new_annotations (
+  quote text not null, -- also should not be empty string or failure
+  text text not null,
+  ranges text not null, -- json array
+  entry_id integer not null,
+
+  foreign key (entry_id) references entries (id) on delete cascade
+)
+
 
 -- used to hold a single row with columns for each saved config value
 -- (this is config that isn't set by the user)
@@ -73,6 +104,7 @@ create table config (
 );
 
 
+-- initial config
 insert into config values (
   1,
   "1970-01-01T00:00:00+00:00"

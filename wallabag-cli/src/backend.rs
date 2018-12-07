@@ -139,8 +139,16 @@ impl Backend {
             // TODO: if not, what does this mean?
         }
 
+        // TODO: track and sync client-side deletes. This would need a new table to save deleted
+        // items in or save its status in the existing table (eg. rename `synced` to `status` and
+        // allow an enum (synced, deleted, unsynced...), and would require pinging the server to
+        // see if the server-side object has been updated since the local delete.
+
+
         // finally push new things to the server
         // TODO: add new tables to track these and code to push
+
+
 
         // Touch the last sync time ready for next sync.
         // This must be done last to ensure the sync has successfully completed.
