@@ -17,6 +17,7 @@ use crate::backend::Backend;
 const INIT: &'static str = "init";
 const SYNC: &'static str = "sync";
 const TAGS: &'static str = "tags";
+const ADD: &'static str = "add";
 
 fn main() -> Fallible<()> {
     // init logging
@@ -47,6 +48,12 @@ fn main() -> Fallible<()> {
                         .help("Perform a full sync (slow)."),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name(ADD)
+                .about("Add a new url")
+                .arg(Arg::with_name("URL").help("The url to save").required(true))
+                .arg(Arg::with_name("upload").short("u").long("upload").help("Upload immediately (requires network connection)")),
+        )
         .subcommand(SubCommand::with_name(TAGS).about("Display a list of tags"));
 
     let matches = app.get_matches();
@@ -70,6 +77,15 @@ fn main() -> Fallible<()> {
             } else {
                 println!("Running a normal sync.");
                 backend.sync()?;
+            }
+        }
+        Some(ADD) => {
+            let add_matches = matches.subcommand_matches(ADD).unwrap();
+            let url = add_matches.value_of("URL").unwrap();
+            if add_matches.is_present("upload") {
+                backend.add_url_online(url)?;
+            } else {
+                backend.add_url(url)?;
             }
         }
         Some(TAGS) => {

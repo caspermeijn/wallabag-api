@@ -179,6 +179,14 @@ impl DB {
         Ok(())
     }
 
+    /// Add a new url to be uploaded next sync.
+    pub fn add_new_url(&self, url: &str) -> Fallible<()> {
+        self.conn()?
+            .execute("INSERT OR REPLACE INTO new_urls (url) VALUES (?)", &[url])?;
+
+        Ok(())
+    }
+
     pub fn get_annotation_deletes(&self) -> Fallible<Vec<ID>> {
         let conn = self.conn()?;
 
@@ -265,7 +273,7 @@ impl DB {
         Ok(())
     }
 
-    ///
+    /// self-explanatory
     pub fn drop_tag_links_for_entry<T: Into<ID>>(&self, entry_id: T) -> Fallible<()> {
         self.conn()?.execute(
             "DELETE FROM taglinks WHERE entry_id = ?",
@@ -322,8 +330,7 @@ impl DB {
                 &entry.user_name,
                 &serde_json::to_string(&entry.tags)?,
             ],
-        )
-        .map(|i| ())?;
+        )?;
 
         Ok(())
     }

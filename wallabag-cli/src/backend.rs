@@ -16,10 +16,10 @@ use rusqlite::Result as SQLResult;
 use rusqlite::{Connection, NO_PARAMS};
 use serde_json;
 
-use wallabag_api::types::{Annotation, Config, NewEntry, EntriesFilter, Entry, Tag, Tags, ID};
+use wallabag_api::types::{Annotation, Config, EntriesFilter, Entry, NewEntry, Tag, Tags, ID};
 use wallabag_api::Client;
 
-use self::db::{DB, DbNewUrl};
+use self::db::{DbNewUrl, DB};
 
 pub struct Backend {
     db: DB,
@@ -41,6 +41,34 @@ impl Backend {
     /// Get a Vec of tags from the db.
     pub fn tags(&self) -> Fallible<Tags> {
         self.db.get_tags()
+    }
+
+    /// Add a new url and attempts to upload and create entry immediatedly. Fails if network
+    /// connection down.
+    pub fn add_url_online<T: AsRef<str>>(&self, url: T) -> Fallible<()> {
+        let config = Config {
+            client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
+            client_secret: env::var("WALLABAG_CLIENT_SECRET")
+                .expect("WALLABAG_CLIENT_SECRET not set"),
+            username: env::var("WALLABAG_USERNAME").expect("WALLABAG_USERNAME not set"),
+            password: env::var("WALLABAG_PASSWORD").expect("WALLABAG_PASSWORD not set"),
+            base_url: env::var("WALLABAG_URL").expect("WALLABAG_URL not set"),
+        };
+
+        let mut client = Client::new(config);
+
+        let url = reqwest::Url::parse(url.as_ref())?;
+
+        let new_entry = NewEntry::new_with_url(url.into_string());
+        let entry = client.create_entry(&new_entry)?;
+
+        self.pull_entry(&mut client, entry)
+    }
+
+    /// Add a new url. Does not attempt to upload immediately.
+    pub fn add_url<T: AsRef<str>>(&self, url: T) -> Fallible<()> {
+        let url = reqwest::Url::parse(url.as_ref())?;
+        self.db.add_new_url(url.as_str())
     }
 
     /// Full sync. Can be slow if many articles. This will sync everything,
