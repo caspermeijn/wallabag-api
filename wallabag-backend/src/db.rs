@@ -62,12 +62,12 @@ impl DB {
 
     /// Create tables in the database, creating the
     pub fn up(&self) -> SQLResult<()> {
-        let query = include_str!("../../sql/up.sql");
+        let query = include_str!("../sql/up.sql");
         self.conn()?.execute_batch(query)
     }
 
     pub fn down(&self) -> SQLResult<()> {
-        let query = include_str!("../../sql/down.sql");
+        let query = include_str!("../sql/down.sql");
         self.conn()?.execute_batch(query)
     }
 

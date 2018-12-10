@@ -9,11 +9,7 @@ failure = "0.1"
 log = "0.4"
 simplelog = "0.5.3"
 clap = "2.32"
-chrono = { version = "0.4", features = ["serde"] }
-rusqlite = "0.15"
-serde_json = "1.0"
-serde = "1.0"
-reqwest = "0.9.5"
-
+chrono = "0.4"
 
 wallabag-api = { path = "../wallabag-api" }
+wallabag-backend = { path = "../wallabag-backend" }

@@ -1,5 +1,3 @@
-mod backend;
-
 use std::env;
 use std::fs::File;
 use std::io;
@@ -12,7 +10,7 @@ use simplelog::WriteLogger;
 use wallabag_api::types::Config;
 use wallabag_api::Client;
 
-use crate::backend::Backend;
+use wallabag_backend::Backend;
 
 const INIT: &'static str = "init";
 const SYNC: &'static str = "sync";

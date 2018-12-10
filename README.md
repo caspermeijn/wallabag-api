@@ -6,10 +6,21 @@ Linux wallabag client tools
 The top-level repo is a cargo workspace. See subdirectories for tools:
 
 - client api library: [wallabag-api](wallabag-api/)
-- gtk client: [wallabag-gtk](wallabag-gtk/) (unimplemented)
-- tui client: [wallabag-tui](wallabag-tui/) (unimplemented)
+- client backend: [wallabag-backend](wallabag-backend/) (wip)
 - cli client: [wallabag-cli](wallabag-cli/) (wip)
+- tui client: [wallabag-tui](wallabag-tui/) (unimplemented)
+- gtk client: [wallabag-gtk](wallabag-gtk/) (unimplemented)
 
+
+## Developing
+
+At the moment everything is managed by standard cargo commands - `build`,
+`test`, `run`, etc. It is in a workspace, so the binary/crate to build/run
+needs to be specified. eg.
+
+```
+cargo run --bin wallabag-cli -- sync
+```
 
 
 # License

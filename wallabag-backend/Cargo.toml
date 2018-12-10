@@ -5,3 +5,12 @@ authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
 edition = "2018"
 
 [dependencies]
+failure = "0.1"
+log = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+rusqlite = "0.15"
+serde_json = "1.0"
+serde = "1.0"
+reqwest = "0.9.5"
+
+wallabag-api = { path = "../wallabag-api" }

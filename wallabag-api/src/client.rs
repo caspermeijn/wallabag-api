@@ -415,7 +415,7 @@ impl Client {
         loop {
             debug!("retrieving PaginatedEntries page {}", filter.page);
             let json: PaginatedEntries =
-                self.smart_json_q(Method::GET, EndPoint::Tags, &filter, UNIT)?;
+                self.smart_json_q(Method::GET, EndPoint::Entries, &filter, UNIT)?;
 
             entries.extend(json._embedded.items.into_iter());
 
