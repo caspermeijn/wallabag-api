@@ -1,21 +1,25 @@
 use std::env;
 use std::fs::File;
-use std::io;
+use std::io::Read;
+
 
 use clap::{App, Arg, SubCommand};
 use failure::Fallible;
 use log::{debug, error, info, warn};
 use simplelog::WriteLogger;
+use serde_derive::{Deserialize, Serialize};
 
-use wallabag_api::types::Config;
-use wallabag_api::Client;
-
-use wallabag_backend::Backend;
+use wallabag_backend::{Backend, Config as BackendConfig};
 
 const INIT: &'static str = "init";
 const SYNC: &'static str = "sync";
 const TAGS: &'static str = "tags";
 const ADD: &'static str = "add";
+
+#[derive(Deserialize, Serialize, Debug)]
+struct Config {
+    backend: BackendConfig,
+}
 
 fn main() -> Fallible<()> {
     // init logging
@@ -56,7 +60,18 @@ fn main() -> Fallible<()> {
 
     let matches = app.get_matches();
 
-    let backend = Backend::new("db.sqlite3");
+    // Load config from file
+    // TODO: default and override in args for filename
+    let conf_file_name = "wallabag-cli-conf.toml";
+    debug!("Attempting to load conf from {}", conf_file_name);
+    let s = read_file(conf_file_name)?;
+    let conf: Config = toml::from_str(&s)?;
+
+    // TODO: allow command line args to override those in conf file
+
+    println!("{:?}", conf);
+
+    let backend = Backend::new_with_conf(conf.backend);
 
     match matches.subcommand_name() {
         None => {
@@ -100,4 +115,12 @@ fn main() -> Fallible<()> {
     }
 
     Ok(())
+}
+
+fn read_file(fname: &str) -> Fallible<String> {
+    let mut file = File::open(fname)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    Ok(contents)
 }

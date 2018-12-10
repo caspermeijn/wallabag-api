@@ -14,23 +14,31 @@ use failure::Fallible;
 use rusqlite::types::ToSql;
 use rusqlite::Result as SQLResult;
 use rusqlite::{Connection, NO_PARAMS};
+use serde_derive::{Deserialize, Serialize};
 use serde_json;
 
 use log::debug;
 
-use wallabag_api::types::{Annotation, Config, EntriesFilter, Entry, NewEntry, Tag, Tags, ID};
+use wallabag_api::types::{
+    Annotation, Config as APIConfig, EntriesFilter, Entry, NewEntry, Tag, Tags, ID,
+};
 use wallabag_api::Client;
 
 use self::db::{DbNewUrl, DB};
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Config {
+    pub db_file: PathBuf,
+}
 
 pub struct Backend {
     db: DB,
 }
 
 impl Backend {
-    pub fn new<T: Into<PathBuf>>(db_file: T) -> Self {
+    pub fn new_with_conf(conf: Config) -> Self {
         Backend {
-            db: DB::new(db_file),
+            db: DB::new(conf.db_file),
         }
     }
 
@@ -49,7 +57,8 @@ impl Backend {
     /// Add a new url and attempts to upload and create entry immediatedly. Fails if network
     /// connection down.
     pub fn add_url_online<T: AsRef<str>>(&self, url: T) -> Fallible<()> {
-        let config = Config {
+        // TODO: cache this and get values from Config in this crate
+        let config = APIConfig {
             client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
             client_secret: env::var("WALLABAG_CLIENT_SECRET")
                 .expect("WALLABAG_CLIENT_SECRET not set"),
@@ -98,7 +107,7 @@ impl Backend {
     ///   with entries updated since previous sync.
     ///
     pub fn sync(&self) -> Fallible<()> {
-        let config = Config {
+        let config = APIConfig {
             client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
             client_secret: env::var("WALLABAG_CLIENT_SECRET")
                 .expect("WALLABAG_CLIENT_SECRET not set"),

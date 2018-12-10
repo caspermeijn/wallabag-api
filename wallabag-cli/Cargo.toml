@@ -10,6 +10,9 @@ log = "0.4"
 simplelog = "0.5.3"
 clap = "2.32"
 chrono = "0.4"
+serde_derive = "1.0"
+serde = "1.0"
+toml = "0.4"
 
 wallabag-api = { path = "../wallabag-api" }
 wallabag-backend = { path = "../wallabag-backend" }
