@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 
 // extern crates
+use log::{debug, max_level, trace, error, LevelFilter};
 use reqwest::{self, Method, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
@@ -13,8 +14,8 @@ use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, Respons
 use crate::types::{
     Annotation, AnnotationRows, Annotations, Config, DeletedEntry, DeletedTag, Entries,
     EntriesFilter, Entry, ExistsInfo, ExistsResponse, Format, NewAnnotation, NewEntry,
-    NewlyRegisteredInfo, PaginatedEntries, PatchEntry, RegisterInfo, Tag, Tags, TokenInfo, User,
-    ID, UNIT, TagString,
+    NewlyRegisteredInfo, PaginatedEntries, PatchEntry, RegisterInfo, Tag, TagString, Tags,
+    TokenInfo, User, ID, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -48,12 +49,16 @@ impl Client {
     fn get_token(&mut self) -> ClientResult<String> {
         match self.token_info {
             Some(ref t) => Ok(t.access_token.clone()),
-            None => self.load_token(),
+            None => {
+                debug!("No api token loaded yet");
+                self.load_token()
+            }
         }
     }
 
     /// Use credentials in the config to obtain an access token.
     fn load_token(&mut self) -> ClientResult<String> {
+        debug!("Requesting auth token");
         let mut fields = HashMap::new();
         fields.insert("grant_type".to_owned(), "password".to_owned());
         fields.insert("client_id".to_owned(), self.client_id.clone());
@@ -120,7 +125,21 @@ impl Client {
         J: Serialize + ?Sized,
         Q: Serialize + ?Sized,
     {
-        Ok(self.smart_q(method, end_point, query, json)?.json()?)
+        if max_level() >= LevelFilter::Debug {
+            let text = self.smart_q(method, end_point, query, json)?.text()?;
+            match serde_json::from_str(&text) {
+                Ok(j) => {
+                    debug!("Deserialized json response body: {}", text);
+                    Ok(j)
+                }
+                Err(e) => {
+                    debug!("Deserialize json failed for: {}", text);
+                    Err(ClientError::SerdeJsonError(e))
+                }
+            }
+        } else {
+            Ok(self.smart_q(method, end_point, query, json)?.json()?)
+        }
     }
 
     /// Smartly run a request that expects to receive json back. Handles adding
@@ -140,6 +159,7 @@ impl Client {
 
         match response_result {
             Err(ClientError::ExpiredToken) => {
+                debug!("Token expired; refreshing");
                 self.refresh_token()?;
 
                 // try the request again now
@@ -166,7 +186,21 @@ impl Client {
         J: Serialize + ?Sized,
         Q: Serialize + ?Sized,
     {
-        Ok(self.q(method, end_point, query, json, use_token)?.json()?)
+        if max_level() >= LevelFilter::Debug {
+            let text = self.q(method, end_point, query, json, use_token)?.text()?;
+            match serde_json::from_str(&text) {
+                Ok(j) => {
+                    debug!("Deserialized json response body: {}", text);
+                    Ok(j)
+                }
+                Err(e) => {
+                    debug!("Deserialize json failed for: {}", text);
+                    Err(ClientError::SerdeJsonError(e))
+                }
+            }
+        } else {
+            Ok(self.q(method, end_point, query, json, use_token)?.json()?)
+        }
     }
 
     /// Build and send a single request. Does most of the heavy lifting.
@@ -183,6 +217,7 @@ impl Client {
         Q: Serialize + ?Sized,
     {
         let url = self.url.build(end_point);
+        trace!("Sending request to {}", url);
 
         let mut request = self.client.request(method, &url).query(query).json(json);
 
@@ -195,6 +230,7 @@ impl Client {
 
         let mut response = request.send()?;
 
+        trace!("response status: {:?}", response.status());
         match response.status() {
             StatusCode::UNAUTHORIZED => {
                 let info: ResponseError = response.json()?;
@@ -377,8 +413,9 @@ impl Client {
         // loop to handle pagination. No other api endpoints paginate so it's
         // fine here.
         loop {
+            debug!("retrieving PaginatedEntries page {}", filter.page);
             let json: PaginatedEntries =
-                self.smart_json_q(Method::GET, EndPoint::Entries, &filter, UNIT)?;
+                self.smart_json_q(Method::GET, EndPoint::Tags, &filter, UNIT)?;
 
             entries.extend(json._embedded.items.into_iter());
 
@@ -497,10 +534,7 @@ impl Client {
     ///
     /// Returns a list of tags that were deleted (sans IDs). Returns 404 not
     /// found _only_ if _all_ tags were not found.
-    pub fn delete_tags_by_label(
-        &mut self,
-        tags: Vec<TagString>,
-    ) -> ClientResult<Vec<DeletedTag>> {
+    pub fn delete_tags_by_label(&mut self, tags: Vec<TagString>) -> ClientResult<Vec<DeletedTag>> {
         let mut params = HashMap::new();
         params.insert(
             "tags",

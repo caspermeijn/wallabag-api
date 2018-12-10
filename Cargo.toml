@@ -1,8 +1,9 @@
 [workspace]
 
 members = [
-  "wallabag-gtk",
   "wallabag-api",
-  "wallabag-tui",
+  "wallabag-backend",
   "wallabag-cli",
+  "wallabag-tui",
+  "wallabag-gtk",
 ]

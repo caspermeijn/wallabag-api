@@ -22,10 +22,10 @@ const ADD: &'static str = "add";
 fn main() -> Fallible<()> {
     // init logging
     WriteLogger::init(
-        simplelog::LevelFilter::Debug,
+        simplelog::LevelFilter::Trace,
         simplelog::Config::default(),
         File::create("wallabag-cli.log").unwrap(),
-    );
+    )?;
 
     let app = App::new("Wallabag CLI")
         .version("alpha")

@@ -1,0 +1,7 @@
+[package]
+name = "wallabag-backend"
+version = "0.1.0"
+authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
+edition = "2018"
+
+[dependencies]

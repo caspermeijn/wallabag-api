@@ -16,6 +16,8 @@ use rusqlite::Result as SQLResult;
 use rusqlite::{Connection, NO_PARAMS};
 use serde_json;
 
+use log::debug;
+
 use wallabag_api::types::{Annotation, Config, EntriesFilter, Entry, NewEntry, Tag, Tags, ID};
 use wallabag_api::Client;
 
@@ -34,6 +36,7 @@ impl Backend {
 
     pub fn init(&self) -> Fallible<()> {
         self.db.init()?;
+        debug!("DB init success");
 
         Ok(())
     }

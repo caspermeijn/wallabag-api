@@ -40,13 +40,20 @@ pub enum ClientError {
 
 impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", "¯\\_(ツ)_/¯")
+        use self::ClientError::*;
+        write!(f, "{}", match self {
+            SerdeJsonError(e) => {
+                format!("Error deserializing json: {}", e)
+            }
+            _ => "¯\\_(ツ)_/¯".to_owned(),
+        })
     }
 }
 
 impl Error for ClientError {}
 
 // TODO: extract reqwest errors and turn them into more useful ClientErrors
+// TODO: maybe impl Error::cause to get the underlying reqwest or serde errors?
 
 // so we can use ? with reqwest in methods and still return ClientError
 impl From<reqwest::Error> for ClientError {

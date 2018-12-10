@@ -1,7 +1,4 @@
-use std::cmp::Ordering::{Equal, Greater, Less};
-use std::env;
 use std::path::PathBuf;
-use std::result::Result;
 
 use chrono::{DateTime, Utc};
 use failure::Fallible;
@@ -10,11 +7,12 @@ use rusqlite::Result as SQLResult;
 use rusqlite::{Connection, Row, NO_PARAMS};
 use serde_json;
 
+use log::debug;
+
 use wallabag_api::types::{
-    Annotation, Annotations, Config, Entries, EntriesFilter, Entry, NewAnnotation, Range, Tag,
+    Annotation, Annotations, Entries, EntriesFilter, Entry, NewAnnotation, Range, Tag,
     Tags, ID,
 };
-use wallabag_api::Client;
 
 pub struct DbNewUrl {
     pub id: i64,
@@ -362,22 +360,21 @@ impl DB {
         Ok(())
     }
 
-    pub fn save_tag(&self, tag: &Tag) -> SQLResult<()> {
-        self.conn()?
-            .execute(
-                "INSERT OR REPLACE INTO tags (id, label, slug) VALUES (?1, ?2, ?3)",
-                &[&tag.id.to_string() as &ToSql, &tag.label, &tag.slug],
-            )
-            .map(|i| ())
+    pub fn save_tag(&self, tag: &Tag) -> Fallible<()> {
+        self.conn()?.execute(
+            "INSERT OR REPLACE INTO tags (id, label, slug) VALUES (?1, ?2, ?3)",
+            &[&tag.id.to_string() as &ToSql, &tag.label, &tag.slug],
+        )?;
+
+        Ok(())
     }
 
     pub fn save_tag_link<T: Into<ID>>(&self, entry_id: T, tag: &Tag) -> Fallible<()> {
-        self.conn()?
-            .execute(
-                "INSERT OR REPLACE INTO taglinks (entry_id, tag_id) VALUES (?1, ?2)",
-                &[&entry_id.into().as_u32() as &ToSql, &tag.id.as_u32()],
-            )
-            .map(|i| ())?;
+        self.conn()?.execute(
+            "INSERT OR REPLACE INTO taglinks (entry_id, tag_id) VALUES (?1, ?2)",
+            &[&entry_id.into().as_u32() as &ToSql, &tag.id.as_u32()],
+        )?;
+
         Ok(())
     }
 
@@ -393,16 +390,23 @@ impl DB {
     pub fn get_tags(&self) -> Fallible<Tags> {
         let conn = self.conn()?;
 
-        // query and display the tags
-        let mut stmt = conn.prepare("SELECT id, label, slug FROM tags")?;
-
-        let results = stmt.query_map(NO_PARAMS, |row| Tag {
-            id: ID(row.get(0)),
-            label: row.get(1),
-            slug: row.get(2),
+        let sql = "SELECT id, label, slug FROM tags";
+        log_sql(sql);
+        let mut stmt = conn.prepare(sql)?;
+        let results = stmt.query_map(NO_PARAMS, |row| -> Fallible<Tag> {
+            Ok(Tag {
+                id: ID(row.get_checked(0)?),
+                label: row.get_checked(1)?,
+                slug: row.get_checked(2)?,
+            })
         })?;
 
-        Ok(results.collect::<SQLResult<Tags>>()?)
+        let mut tags = vec![];
+        for maybe_maybe_tag in results {
+            tags.push(maybe_maybe_tag??);
+        }
+
+        Ok(tags)
     }
 }
 
@@ -478,4 +482,9 @@ fn row_to_ann<'r, 's, 't0>(row: &'r Row<'s, 't0>) -> Fallible<Annotation> {
         quote: row.get(6),
         user: row.get(7),
     })
+}
+
+/// logs a sql query string. this function just for consistency
+fn log_sql(sql: &str) {
+    debug!("SQL {:?}", sql);
 }

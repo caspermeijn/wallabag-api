@@ -6,9 +6,9 @@ edition = "2018"
 
 [dependencies]
 
-# TODO: restrict versions
-reqwest = "*"
-serde = "*"
-serde_derive = "*"
+log = "0.4"
+reqwest = "0.9"
+serde = "1.0"
+serde_derive = "1.0"
 serde_json = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
