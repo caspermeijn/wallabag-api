@@ -53,6 +53,7 @@ impl DB {
     /// database file does exist but is in a broken state, then you should
     /// manually delete the file and start again.
     pub fn init(&self) -> SQLResult<()> {
+        // TODO: return err if exists with warning
         if self.db_file.exists() {
             return Ok(());
         }

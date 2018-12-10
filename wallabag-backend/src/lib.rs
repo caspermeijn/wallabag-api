@@ -28,7 +28,12 @@ use self::db::{DbNewUrl, DB};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
+    #[serde(default = "default_db_file")]
     pub db_file: PathBuf,
+}
+
+fn default_db_file() -> PathBuf {
+    "db.sqlite3".into()
 }
 
 pub struct Backend {
