@@ -42,7 +42,7 @@ pub(crate) struct TokenInfo {
 }
 
 /// configuration to use to init a `Client`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub client_id: String,
     pub client_secret: String,

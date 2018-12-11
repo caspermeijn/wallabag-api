@@ -19,6 +19,7 @@ pub struct DbNewUrl {
     pub url: String,
 }
 
+#[derive(Debug)]
 pub struct DB {
     db_file: PathBuf,
 }

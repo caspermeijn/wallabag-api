@@ -1,3 +1,9 @@
 
 [backend]
 db_file = "somedb.sqlite3"
+# using head -c -1 to remove trailing newline
+client_id = { cmd = ["head", "-c", "-1", ".env.clientid"] }
+client_secret = { cmd = ["head", "-c", "-1", ".env.clientsecret"] }
+username = "testbot47353"
+password = { cmd = ["head", "-c", "-1", ".env.password"] }
+base_url = "https://framabag.org" # without trailing slash for now otherwise error

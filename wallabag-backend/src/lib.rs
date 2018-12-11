@@ -6,8 +6,9 @@ mod db;
 use std::cmp::Ordering::{Equal, Greater, Less};
 use std::collections::HashSet;
 use std::env;
+use std::fmt;
 use std::path::PathBuf;
-use std::result::Result;
+use std::process::Command;
 
 use chrono::{DateTime, Utc};
 use failure::Fallible;
@@ -27,24 +28,81 @@ use wallabag_api::Client;
 use self::db::{DbNewUrl, DB};
 
 #[derive(Deserialize, Serialize, Debug)]
+#[serde(untagged)]
+pub enum StringOrCmd {
+    S(String),
+    Cmd { cmd: Vec<String> },
+}
+
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Config {
     #[serde(default = "default_db_file")]
     pub db_file: PathBuf,
+    pub client_id: StringOrCmd,
+    pub client_secret: StringOrCmd,
+    pub username: StringOrCmd,
+    pub password: StringOrCmd,
+    pub base_url: String,
 }
 
 fn default_db_file() -> PathBuf {
     "db.sqlite3".into()
 }
 
+#[derive(Debug)]
 pub struct Backend {
     db: DB,
+    api_config: APIConfig,
+}
+
+#[derive(Debug)]
+pub enum BackendError {
+    EmptyCommand,
+    FailedCommand,
+}
+impl fmt::Display for BackendError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+impl std::error::Error for BackendError {}
+
+/// Get a string from possibly a command to run. Used for evaluating config values which maybe be a
+/// literal string, or could be a command to evaluate and use the output.
+fn get_string(x: &StringOrCmd) -> Fallible<String> {
+    match x {
+        StringOrCmd::S(s) => Ok(s.clone()),
+        StringOrCmd::Cmd { cmd } => {
+            debug!("Running command {:?}", cmd);
+            let mut args = cmd.iter();
+
+            let cmd = args.next().ok_or(BackendError::EmptyCommand)?;
+
+            let output = Command::new(cmd).args(args).output()?;
+            if !output.status.success() {
+                debug!("Command failed with exit status {:?}", output.status.code());
+                Err(BackendError::FailedCommand)?
+            } else {
+                let output = String::from_utf8(output.stdout)?;
+                Ok(output)
+            }
+        }
+    }
 }
 
 impl Backend {
-    pub fn new_with_conf(conf: Config) -> Self {
-        Backend {
+    pub fn new_with_conf(conf: Config) -> Fallible<Self> {
+        let backend = Backend {
             db: DB::new(conf.db_file),
-        }
+            api_config: APIConfig {
+                client_id: get_string(&conf.client_id)?,
+                client_secret: get_string(&conf.client_secret)?,
+                username: get_string(&conf.username)?,
+                password: get_string(&conf.password)?,
+                base_url: conf.base_url,
+            },
+        };
+        Ok(backend)
     }
 
     pub fn init(&self) -> Fallible<()> {
@@ -62,17 +120,7 @@ impl Backend {
     /// Add a new url and attempts to upload and create entry immediatedly. Fails if network
     /// connection down.
     pub fn add_url_online<T: AsRef<str>>(&self, url: T) -> Fallible<()> {
-        // TODO: cache this and get values from Config in this crate
-        let config = APIConfig {
-            client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
-            client_secret: env::var("WALLABAG_CLIENT_SECRET")
-                .expect("WALLABAG_CLIENT_SECRET not set"),
-            username: env::var("WALLABAG_USERNAME").expect("WALLABAG_USERNAME not set"),
-            password: env::var("WALLABAG_PASSWORD").expect("WALLABAG_PASSWORD not set"),
-            base_url: env::var("WALLABAG_URL").expect("WALLABAG_URL not set"),
-        };
-
-        let mut client = Client::new(config);
+        let mut client = Client::new(self.api_config.clone());
 
         let url = reqwest::Url::parse(url.as_ref())?;
 
@@ -112,16 +160,7 @@ impl Backend {
     ///   with entries updated since previous sync.
     ///
     pub fn sync(&self) -> Fallible<()> {
-        let config = APIConfig {
-            client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
-            client_secret: env::var("WALLABAG_CLIENT_SECRET")
-                .expect("WALLABAG_CLIENT_SECRET not set"),
-            username: env::var("WALLABAG_USERNAME").expect("WALLABAG_USERNAME not set"),
-            password: env::var("WALLABAG_PASSWORD").expect("WALLABAG_PASSWORD not set"),
-            base_url: env::var("WALLABAG_URL").expect("WALLABAG_URL not set"),
-        };
-
-        let mut client = Client::new(config);
+        let mut client = Client::new(self.api_config.clone());
 
         // Sync entries recently updated server-side. Entries have tag links and annotations embedded.
         let mut filter = EntriesFilter::default();
@@ -201,7 +240,7 @@ impl Backend {
         }
 
         // finally push new things to the server
-        for DbNewUrl { id: id, url: url } in self.db.get_new_urls()? {
+        for DbNewUrl { id, url } in self.db.get_new_urls()? {
             let new_entry = NewEntry::new_with_url(url);
             let entry = client.create_entry(&new_entry)?;
             self.pull_entry(&mut client, entry)?;
@@ -211,7 +250,7 @@ impl Backend {
         for (entry_id, new_ann_id, new_ann) in self.db.get_new_annotations()? {
             let ann = client.create_annotation(entry_id, new_ann)?;
             self.db.save_annotation(&ann, entry_id)?;
-            self.db.remove_new_annotation(new_ann_id);
+            self.db.remove_new_annotation(new_ann_id)?;
         }
 
         // last of all drop tags with no tag_links

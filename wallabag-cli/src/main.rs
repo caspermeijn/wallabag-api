@@ -71,7 +71,7 @@ fn main() -> Fallible<()> {
 
     println!("{:?}", conf);
 
-    let backend = Backend::new_with_conf(conf.backend);
+    let backend = Backend::new_with_conf(conf.backend)?;
 
     match matches.subcommand_name() {
         None => {
