@@ -1,13 +1,11 @@
-use std::env;
 use std::fs::File;
 use std::io::Read;
 
-
 use clap::{App, Arg, SubCommand};
 use failure::Fallible;
-use log::{debug, error, info, warn};
-use simplelog::WriteLogger;
+use log::debug;
 use serde_derive::{Deserialize, Serialize};
+use simplelog::WriteLogger;
 
 use wallabag_backend::{Backend, Config as BackendConfig};
 
@@ -23,6 +21,7 @@ struct Config {
 
 fn main() -> Fallible<()> {
     // init logging
+    // TODO: dynamically configure file name
     WriteLogger::init(
         simplelog::LevelFilter::Trace,
         simplelog::Config::default(),
@@ -54,7 +53,12 @@ fn main() -> Fallible<()> {
             SubCommand::with_name(ADD)
                 .about("Add a new url")
                 .arg(Arg::with_name("URL").help("The url to save").required(true))
-                .arg(Arg::with_name("upload").short("u").long("upload").help("Upload immediately (requires network connection)")),
+                .arg(
+                    Arg::with_name("upload")
+                        .short("u")
+                        .long("upload")
+                        .help("Upload immediately (requires network connection)"),
+                ),
         )
         .subcommand(SubCommand::with_name(TAGS).about("Display a list of tags"));
 
@@ -62,14 +66,12 @@ fn main() -> Fallible<()> {
 
     // Load config from file
     // TODO: default and override in args for filename
-    let conf_file_name = "wallabag-cli-conf.toml";
+    let conf_file_name = "examples/wallabag-cli.toml";
     debug!("Attempting to load conf from {}", conf_file_name);
     let s = read_file(conf_file_name)?;
     let conf: Config = toml::from_str(&s)?;
 
     // TODO: allow command line args to override those in conf file
-
-    println!("{:?}", conf);
 
     let backend = Backend::new_with_conf(conf.backend)?;
 

@@ -10,7 +10,7 @@ use serde_json;
 use log::debug;
 
 use wallabag_api::types::{
-    Annotation, Annotations, Entries, EntriesFilter, Entry, NewAnnotation, Range, Tag,
+    Annotation, Annotations, Entries, Entry, NewAnnotation, Range, Tag,
     Tags, ID,
 };
 

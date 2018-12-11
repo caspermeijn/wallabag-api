@@ -5,23 +5,18 @@ mod db;
 
 use std::cmp::Ordering::{Equal, Greater, Less};
 use std::collections::HashSet;
-use std::env;
 use std::fmt;
 use std::path::PathBuf;
 use std::process::Command;
 
-use chrono::{DateTime, Utc};
 use failure::Fallible;
-use rusqlite::types::ToSql;
-use rusqlite::Result as SQLResult;
-use rusqlite::{Connection, NO_PARAMS};
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 
 use log::debug;
 
 use wallabag_api::types::{
-    Annotation, Config as APIConfig, EntriesFilter, Entry, NewEntry, Tag, Tags, ID,
+    Annotation, Config as APIConfig, EntriesFilter, Entry, NewEntry, Tags, ID,
 };
 use wallabag_api::Client;
 
@@ -271,7 +266,7 @@ impl Backend {
 
         if let Some(ref anns) = entry.annotations {
             for ann in anns {
-                self.sync_annotation(client, ann, &entry);
+                self.sync_annotation(client, ann, &entry)?;
             }
         }
 

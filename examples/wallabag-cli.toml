@@ -1,6 +1,8 @@
 
+
 [backend]
-db_file = "somedb.sqlite3"
+db_file = "db.sqlite3"
+
 # using head -c -1 to remove trailing newline
 client_id = { cmd = ["head", "-c", "-1", ".env.clientid"] }
 client_secret = { cmd = ["head", "-c", "-1", ".env.clientsecret"] }
