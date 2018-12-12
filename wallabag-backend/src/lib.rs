@@ -138,7 +138,8 @@ impl Backend {
     }
 
     /// Full sync. Can be slow if many articles. This will sync everything,
-    /// including things that can't be synced with a quick/normal sync.
+    /// including things that can't be synced with a quick/normal sync (eg. server-side deleted
+    /// items)
     ///
     /// For entries and annotations existing in the database, object with latest
     /// updated_at value wins.
