@@ -1,23 +1,35 @@
+use std::fmt;
+use std::fs;
 use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
 use failure::Fallible;
 use rusqlite::types::ToSql;
 use rusqlite::Result as SQLResult;
-use rusqlite::{Connection, Row, NO_PARAMS};
+use rusqlite::{Connection, OpenFlags, Row, NO_PARAMS};
 use serde_json;
 
 use log::debug;
 
 use wallabag_api::types::{
-    Annotation, Annotations, Entries, Entry, NewAnnotation, Range, Tag,
-    Tags, ID,
+    Annotation, Annotations, Entries, Entry, NewAnnotation, Range, Tag, Tags, ID,
 };
 
 pub struct DbNewUrl {
     pub id: i64,
     pub url: String,
 }
+
+#[derive(Debug)]
+pub enum DBClientError {
+    DBExists,
+}
+impl fmt::Display for DBClientError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+impl std::error::Error for DBClientError {}
 
 #[derive(Debug)]
 pub struct DB {
@@ -31,9 +43,17 @@ impl DB {
         }
     }
 
-    /// opens a new connection to the db, turns on foreign keys support, and returns the connection
-    fn conn(&self) -> SQLResult<Connection> {
-        let conn = Connection::open(&self.db_file)?;
+    /// Opens a new connection to the db, turns on foreign keys support, and returns the
+    /// connection.
+    ///
+    /// If the database file doesn't already exist, the db will be created and inited.
+    fn conn(&self) -> Fallible<Connection> {
+        if !self.db_file.exists() {
+            debug!("DB file does not exist; initializing");
+            self.init()?;
+        }
+
+        let conn = Connection::open_with_flags(&self.db_file, OpenFlags::SQLITE_OPEN_READ_WRITE)?;
         conn.execute("PRAGMA foreign_keys = ON", NO_PARAMS)?;
         Ok(conn)
     }
@@ -41,36 +61,38 @@ impl DB {
     /// Reset the database to a clean state. Database file will be created if
     /// not existing.
     ///
-    /// Warning: this means all data in db tables will be lost.
-    pub fn reset(&self) -> SQLResult<()> {
+    /// Warning: this means all data in database will be lost and open connections will be
+    /// disrupted due to the file being deleted.
+    pub fn reset(&self) -> Fallible<()> {
         if self.db_file.exists() {
-            self.down()?;
-        }
-
-        self.init()
-    }
-
-    /// Initiates the database if the database file doesn't exist. If the
-    /// database file does exist but is in a broken state, then you should
-    /// manually delete the file and start again.
-    pub fn init(&self) -> SQLResult<()> {
-        // TODO: return err if exists with warning
-        if self.db_file.exists() {
-            return Ok(());
+            fs::remove_file(&self.db_file)?;
         }
 
         self.up()
     }
 
-    /// Create tables in the database, creating the
-    pub fn up(&self) -> SQLResult<()> {
-        let query = include_str!("../sql/up.sql");
-        self.conn()?.execute_batch(query)
+    /// Initiates the database if the database file doesn't exist. If the
+    /// database file does exist but is in a broken state, then you should
+    /// manually delete the file and start again.
+    pub fn init(&self) -> Fallible<()> {
+        if self.db_file.exists() {
+            debug!("DB file already exists, not initing");
+            Err(DBClientError::DBExists)?;
+        }
+
+        self.up()
     }
 
-    pub fn down(&self) -> SQLResult<()> {
-        let query = include_str!("../sql/down.sql");
-        self.conn()?.execute_batch(query)
+    /// Create tables/indices/etc. in the database.
+    ///
+    /// This also creates the file in the process of making the connection.
+    pub fn up(&self) -> Fallible<()> {
+        // manually set up the connection because we don't want the magic that self.conn() does.
+        let conn = Connection::open(&self.db_file)?;
+        conn.execute("PRAGMA foreign_keys = ON", NO_PARAMS)?;
+
+        let query = include_str!("../sql/up.sql");
+        Ok(conn.execute_batch(query)?)
     }
 
     // get an annotation from the db by id
@@ -252,15 +274,15 @@ impl DB {
 
     /// get the last time a sync was performed. used for optimization by the
     /// backend
-    pub fn get_last_sync(&self) -> SQLResult<chrono::ParseResult<DateTime<Utc>>> {
-        self.conn()?.query_row(
+    pub fn get_last_sync(&self) -> Fallible<chrono::ParseResult<DateTime<Utc>>> {
+        Ok(self.conn()?.query_row(
             "SELECT (last_sync) FROM config WHERE id = 1",
             NO_PARAMS,
             |row| {
                 DateTime::parse_from_rfc3339(&row.get::<usize, String>(0))
                     .map(|dt| dt.with_timezone(&Utc))
             },
-        )
+        )?)
     }
 
     /// Sets the last sync time to now.

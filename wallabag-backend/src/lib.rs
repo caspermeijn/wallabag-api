@@ -47,7 +47,7 @@ fn default_db_file() -> PathBuf {
 #[derive(Debug)]
 pub struct Backend {
     db: DB,
-    api_config: APIConfig,
+    client: Client
 }
 
 #[derive(Debug)]
@@ -89,16 +89,24 @@ impl Backend {
     pub fn new_with_conf(conf: Config) -> Fallible<Self> {
         let backend = Backend {
             db: DB::new(conf.db_file),
-            api_config: APIConfig {
+            client: Client::new(APIConfig {
                 client_id: get_string(&conf.client_id)?,
                 client_secret: get_string(&conf.client_secret)?,
                 username: get_string(&conf.username)?,
                 password: get_string(&conf.password)?,
                 base_url: conf.base_url,
-            },
+            }),
         };
         Ok(backend)
     }
+
+    pub fn reset(&self) -> Fallible<()> {
+        self.db.reset()?;
+        debug!("DB reset success");
+
+        Ok(())
+    }
+
 
     pub fn init(&self) -> Fallible<()> {
         self.db.init()?;
@@ -114,15 +122,13 @@ impl Backend {
 
     /// Add a new url and attempts to upload and create entry immediatedly. Fails if network
     /// connection down.
-    pub fn add_url_online<T: AsRef<str>>(&self, url: T) -> Fallible<()> {
-        let mut client = Client::new(self.api_config.clone());
-
+    pub fn add_url_online<T: AsRef<str>>(&mut self, url: T) -> Fallible<()> {
         let url = reqwest::Url::parse(url.as_ref())?;
 
         let new_entry = NewEntry::new_with_url(url.into_string());
-        let entry = client.create_entry(&new_entry)?;
+        let entry = self.client.create_entry(&new_entry)?;
 
-        self.pull_entry(&mut client, entry)
+        self.pull_entry(entry)
     }
 
     /// Add a new url. Does not attempt to upload immediately.
@@ -154,14 +160,12 @@ impl Backend {
     /// - Annotations updated or created server-side that are not associated
     ///   with entries updated since previous sync.
     ///
-    pub fn sync(&self) -> Fallible<()> {
-        let mut client = Client::new(self.api_config.clone());
-
+    pub fn sync(&mut self) -> Fallible<()> {
         // Sync entries recently updated server-side. Entries have tag links and annotations embedded.
         let mut filter = EntriesFilter::default();
         let since = self.db.get_last_sync()??;
         filter.since = since.timestamp() as u64;
-        let entries = client.get_entries_with_filter(filter)?;
+        let entries = self.client.get_entries_with_filter(filter)?;
 
         // used when syncing up locally updated entries/annotations to avoid syncing twice
         let seen_entries: HashSet<ID> = entries.iter().map(|e| e.id).collect();
@@ -192,7 +196,7 @@ impl Backend {
                 match Ord::cmp(&saved_entry.updated_at, &entry.updated_at) {
                     Less => {
                         // saved entry is older than pulled version; overwrite
-                        self.pull_entry(&mut client, entry)?;
+                        self.pull_entry(entry)?;
                     }
                     Equal => {
                         // noop; already synced and same version
@@ -200,13 +204,13 @@ impl Backend {
                     Greater => {
                         // local entry is newer, push to server
                         let updated_entry =
-                            client.update_entry(saved_entry.id, &(&saved_entry).into())?;
+                            self.client.update_entry(saved_entry.id, &(&saved_entry).into())?;
                         // run pull entry on the entry returned to sync any new tags
-                        self.pull_entry(&mut client, updated_entry)?;
+                        self.pull_entry(updated_entry)?;
                     }
                 }
             } else {
-                self.pull_entry(&mut client, entry)?;
+                self.pull_entry(entry)?;
             }
         }
 
@@ -214,36 +218,36 @@ impl Backend {
         // previously.
         for entry in self.db.get_entries_since(since)?.into_iter() {
             if !seen_entries.contains(&entry.id) {
-                client.update_entry(entry.id, &(&entry).into())?;
+                self.client.update_entry(entry.id, &(&entry).into())?;
             }
         }
 
         for ann in self.db.get_annotations_since(since)?.into_iter() {
             if !seen_annotations.contains(&ann.id) {
-                client.update_annotation(&ann)?;
+                self.client.update_annotation(&ann)?;
             }
         }
 
         // track and sync client-side deletes.
         for entry_id in self.db.get_entry_deletes()? {
-            client.delete_entry(entry_id)?;
+            self.client.delete_entry(entry_id)?;
             self.db.remove_delete_entry(entry_id)?;
         }
         for annotation_id in self.db.get_annotation_deletes()? {
-            client.delete_annotation(annotation_id)?;
+            self.client.delete_annotation(annotation_id)?;
             self.db.remove_delete_annotation(annotation_id)?;
         }
 
         // finally push new things to the server
         for DbNewUrl { id, url } in self.db.get_new_urls()? {
             let new_entry = NewEntry::new_with_url(url);
-            let entry = client.create_entry(&new_entry)?;
-            self.pull_entry(&mut client, entry)?;
+            let entry = self.client.create_entry(&new_entry)?;
+            self.pull_entry(entry)?;
             self.db.remove_new_url(id)?;
         }
 
         for (entry_id, new_ann_id, new_ann) in self.db.get_new_annotations()? {
-            let ann = client.create_annotation(entry_id, new_ann)?;
+            let ann = self.client.create_annotation(entry_id, new_ann)?;
             self.db.save_annotation(&ann, entry_id)?;
             self.db.remove_new_annotation(new_ann_id)?;
         }
@@ -261,12 +265,12 @@ impl Backend {
     /// save an entry to the database where the entry has been determined to be
     /// newer than any in the database, but still need to do bidirectional sync
     /// for associated annotations and tags
-    fn pull_entry(&self, client: &mut Client, entry: Entry) -> Fallible<()> {
+    fn pull_entry(&mut self, entry: Entry) -> Fallible<()> {
         self.db.save_entry(&entry)?;
 
         if let Some(ref anns) = entry.annotations {
             for ann in anns {
-                self.sync_annotation(client, ann, &entry)?;
+                self.sync_annotation(ann, &entry)?;
             }
         }
 
@@ -282,8 +286,7 @@ impl Backend {
 
     /// sync an annotation given an annotation from the server.
     fn sync_annotation<T: Into<ID>>(
-        &self,
-        client: &mut Client,
+        &mut self,
         ann: &Annotation,
         entry_id: T,
     ) -> Fallible<()> {
@@ -299,7 +302,7 @@ impl Backend {
                 }
                 Greater => {
                     // local annotation is newer, push to server
-                    let updated_ann = client.update_annotation(&saved_ann)?;
+                    let updated_ann = self.client.update_annotation(&saved_ann)?;
                     self.db.save_annotation(&updated_ann, entry_id)?;
                 }
             }

@@ -13,6 +13,7 @@ const INIT: &'static str = "init";
 const SYNC: &'static str = "sync";
 const TAGS: &'static str = "tags";
 const ADD: &'static str = "add";
+const RESET: &'static str = "reset";
 
 #[derive(Deserialize, Serialize, Debug)]
 struct Config {
@@ -40,6 +41,7 @@ fn main() -> Fallible<()> {
                 .takes_value(true),
         )
         .subcommand(SubCommand::with_name(INIT).about("init the database"))
+        .subcommand(SubCommand::with_name(RESET).about("reset the database (all data lost)"))
         .subcommand(
             SubCommand::with_name(SYNC)
                 .about("bidirectional sync database with server")
@@ -73,24 +75,27 @@ fn main() -> Fallible<()> {
 
     // TODO: allow command line args to override those in conf file
 
-    let backend = Backend::new_with_conf(conf.backend)?;
+    let mut backend = Backend::new_with_conf(conf.backend)?;
 
     match matches.subcommand_name() {
         None => {
-            println!("No subcommand given.");
+            println!(":: No subcommand given.");
         }
         Some(INIT) => {
-            println!("Initing the database...");
-            let res = backend.init();
-            println!("{:#?}", res);
+            println!(":: Initing the database...");
+            backend.init()?;
+        }
+        Some(RESET) => {
+            println!(":: Resetting the database to a clean state...");
+            backend.reset()?;
         }
         Some(SYNC) => {
             let sync_matches = matches.subcommand_matches(SYNC).unwrap();
             if sync_matches.is_present("full") {
-                println!("Running a full sync.");
+                println!(":: Running a full sync.");
                 backend.full_sync()?;
             } else {
-                println!("Running a normal sync.");
+                println!(":: Running a normal sync.");
                 backend.sync()?;
             }
         }

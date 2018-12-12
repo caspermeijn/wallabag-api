@@ -52,6 +52,7 @@ impl fmt::Display for EndPoint {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct UrlBuilder {
     base_url: String,
 }

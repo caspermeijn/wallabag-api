@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 // extern crates
-use log::{debug, max_level, trace, error, LevelFilter};
+use log::{debug, max_level, trace, LevelFilter};
 use reqwest::{self, Method, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
@@ -21,6 +21,7 @@ use crate::utils::{EndPoint, UrlBuilder};
 
 /// The main thing that provides all the methods for interacting with the
 /// wallabag api.
+#[derive(Debug)]
 pub struct Client {
     client_id: String,
     client_secret: String,
