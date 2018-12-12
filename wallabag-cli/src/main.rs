@@ -136,7 +136,7 @@ fn main() -> Fallible<()> {
             level: Some(Level::Error),
             target: Some(Level::Error),
             location: Some(Level::Error),
-            time_format: None,
+            time_format: Some("%F %T"),
         },
         OpenOptions::new().create(true).append(true).open(config.cli.log_file)?,
     )?;

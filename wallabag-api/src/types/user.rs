@@ -3,7 +3,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::types::ID;
 
-/// A struct representing a user.
+/// A struct representing a user. (ie. you) Fields should be self-explanatory.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct User {
     pub id: ID,
@@ -13,8 +13,8 @@ pub struct User {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-/// A struct representing a user to be registered. Includes the name for the
-/// client to be registered along with.
+/// A struct representing a user to be registered. Includes the name for the client to be
+/// registered along with.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct RegisterInfo {
     pub username: String,
@@ -34,6 +34,7 @@ pub struct NewlyRegisteredInfo {
     pub default_client: ClientInfo,
 }
 
+/// Represents the oauth client details.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct ClientInfo {
     client_id: String,

@@ -1,3 +1,6 @@
+//! Custom utility functions to help with serializing/deserializing values from the API that want
+//! to be difficult.
+
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serializer};
 use serde_derive::Deserialize;

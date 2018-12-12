@@ -2,7 +2,7 @@ use serde::Serializer;
 use serde_derive::Serialize;
 use std::result::Result;
 
-/// Used in `EntriesFilter` for sorting results.
+/// Used in `EntriesFilter` for ordering results.
 #[derive(Serialize, Debug, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum SortOrder {

@@ -7,15 +7,23 @@ use super::common::ID;
 /// List of tags declared for clarity.
 pub type Tags = Vec<Tag>;
 
-/// Represents a tag from the api.
+/// Represents a tag from the API.
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Tag {
+    /// The unique tag ID.
     pub id: ID,
+
+    /// The label aka name. The API accepts tags with commas in the label, but this is discouraged
+    /// as some API methods require tags to be supplied as a comma separated string (eg.
+    /// "tag1,tag2") and commas in the labels causes the label to be split into multiple tags.
     pub label: String,
+
+    /// The url-friendly unique label for the tag to be used in web links. Usually derived from the
+    /// tag label. Eg.  `https://framabag.org/tag/list/vim-1` for a tag labelled `vim`.
     pub slug: String,
 }
 
-/// Convenience method to use an ID or Tag interchangably in client methods.
+/// Convenience method to use an ID or Tag interchangeably in client methods.
 impl From<Tag> for ID {
     fn from(tag: Tag) -> Self {
         tag.id
@@ -29,13 +37,14 @@ pub struct DeletedTag {
     pub slug: String,
 }
 
-/// Represents a valid tag name
+/// Represents a valid tag name for tags when sent to the API as a comma separated string. (eg.
+/// "tag1,tag2") Only client methods that need to format a list of tags in this way will use
+/// this.
 #[derive(Debug)]
 pub struct TagString {
     label: String,
 }
 
-// so we can use to_string
 impl fmt::Display for TagString {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.label)
@@ -53,5 +62,15 @@ impl TagString {
         } else {
             Some(TagString { label })
         }
+    }
+
+    /// Get a reference to the tag label.
+    pub fn as_str(&self) -> &str {
+        &self.label
+    }
+
+    /// Consume the tag and convert into a plain String.
+    pub fn into_string(self) -> String {
+        self.label
     }
 }

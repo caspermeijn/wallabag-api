@@ -13,6 +13,8 @@ pub struct NewEntry {
     pub url: String,
     pub title: Option<String>,
 
+    /// Tags containing a comma are valid but discouraged...
+    /// Also note that these are tag labels as strings, not Tag objects.
     pub tags: Option<Vec<String>>,
 
     #[serde(serialize_with = "bool_to_int")]
@@ -26,7 +28,10 @@ pub struct NewEntry {
     pub language: Option<String>,
     pub preview_picture: Option<String>,
     pub published_at: Option<DateTime<Utc>>,
-    pub authors: Option<String>, // format: "name 1,name2"
+
+    /// Formatted as "name 1, name 2"
+    pub authors: Option<String>,
+
     pub origin_url: Option<String>,
 }
 

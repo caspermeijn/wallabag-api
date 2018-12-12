@@ -1,3 +1,5 @@
+//! Client error types.
+
 use std::error::Error;
 use std::fmt;
 
@@ -6,14 +8,15 @@ use serde_derive::Deserialize;
 
 pub type ClientResult<T> = std::result::Result<T, ClientError>;
 
-/// Type for the json error data returned on error from the http api
+/// Type for the JSON error data returned on error from the HTTP API
+/// The API seems a bit unreliable on the format of errors returned...
 #[derive(Deserialize, Debug)]
 pub struct ResponseError {
     pub error: String,
     pub error_description: String,
 }
 
-/// Type for the json error data returned on forbidden error from http api
+/// Type for the JSON error data returned on forbidden error from HTTP API
 #[derive(Deserialize, Debug)]
 pub struct ResponseCodeMessageError {
     pub error: CodeMessage,
@@ -25,6 +28,7 @@ pub struct CodeMessage {
     pub message: String,
 }
 
+/// Represents all error possibilities that could be returned by the client.
 #[derive(Debug)]
 pub enum ClientError {
     ReqwestError(reqwest::Error),

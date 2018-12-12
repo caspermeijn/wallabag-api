@@ -4,6 +4,7 @@ use std::fmt;
 
 use crate::types::{Format, ID};
 
+/// Used for building API endpoint urls from the client.
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum EndPoint {
     Token,
@@ -52,6 +53,7 @@ impl fmt::Display for EndPoint {
     }
 }
 
+/// Used by the API client to build URLs to send requests to.
 #[derive(Debug)]
 pub(crate) struct UrlBuilder {
     base_url: String,
@@ -62,6 +64,7 @@ impl UrlBuilder {
         UrlBuilder { base_url }
     }
 
+    /// Build a full URL given an endpoint to use.
     pub(crate) fn build(&self, end_point: EndPoint) -> String {
         format!("{}{}", self.base_url, end_point)
     }

@@ -1,4 +1,4 @@
-//! Client
+//! Client.
 
 // std libs
 use std::collections::HashMap;
@@ -20,7 +20,7 @@ use crate::types::{
 use crate::utils::{EndPoint, UrlBuilder};
 
 /// The main thing that provides all the methods for interacting with the
-/// wallabag api.
+/// Wallabag API.
 #[derive(Debug)]
 pub struct Client {
     client_id: String,
@@ -33,6 +33,8 @@ pub struct Client {
 }
 
 impl Client {
+
+    /// Build a new client given the configuration.
     pub fn new(config: Config) -> Self {
         Client {
             client_id: config.client_id,
@@ -549,7 +551,7 @@ impl Client {
         params.insert(
             "tags",
             tags.into_iter()
-                .map(|x| x.to_string())
+                .map(|x| x.into_string())
                 .collect::<Vec<String>>()
                 .join(","),
         );
