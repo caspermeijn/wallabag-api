@@ -124,8 +124,8 @@ pub fn main() {
     // let res = client.get_tags();
     // println!("{:#?}", res);
 
-    // let res = client.export_entry(1800725, Format::XML);
-    // println!("{:#?}", res);
+    // let res = client.export_entry(1798248, Format::TXT).expect("wat");
+    // println!("{}", res);
 
     // let res = client.get_tags_for_entry(1800725);
     // println!("{:#?}", res);

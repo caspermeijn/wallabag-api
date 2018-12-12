@@ -1,8 +1,9 @@
 use std::fs::File;
 use std::io::Read;
+use std::fmt;
 
 use clap::{App, Arg, SubCommand};
-use failure::Fallible;
+use failure::{Fallible, bail};
 use log::debug;
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serializer};
@@ -11,11 +12,24 @@ use simplelog::{Level, LevelFilter, WriteLogger};
 
 use wallabag_backend::{Backend, Config as BackendConfig};
 
+#[derive(Debug)]
+pub struct MessageError(String);
+
+impl fmt::Display for MessageError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+impl std::error::Error for MessageError {}
+
 const INIT: &'static str = "init";
 const SYNC: &'static str = "sync";
 const TAGS: &'static str = "tags";
 const ADD: &'static str = "add";
 const RESET: &'static str = "reset";
+const ENTRIES: &'static str = "entry";
+const LIST: &'static str = "list";
+const SHOW: &'static str = "show";
 
 #[derive(Deserialize, Serialize, Debug)]
 struct CliConfig {
@@ -94,7 +108,15 @@ fn main() -> Fallible<()> {
                         .help("Upload immediately (requires network connection)"),
                 ),
         )
-        .subcommand(SubCommand::with_name(TAGS).about("Display a list of tags"));
+        .subcommand(SubCommand::with_name(TAGS).about("Display a list of tags"))
+        .subcommand(
+            SubCommand::with_name(ENTRIES)
+                .about("Work with entries")
+                .subcommand(SubCommand::with_name(LIST).about("List all entries"))
+                .subcommand(SubCommand::with_name(SHOW).about("Print the entry's content")
+                            .arg(Arg::with_name("entry_id").required(true).help("ID of the entry to show")
+                            )),
+        );
 
     let matches = app.get_matches();
 
@@ -160,8 +182,50 @@ fn main() -> Fallible<()> {
                 println!("{}", tag.label);
             }
         }
-        _ => {
-            // shrug
+        Some(ENTRIES) => {
+            let entries_matches = matches.subcommand_matches(ENTRIES).unwrap();
+            match entries_matches
+                .subcommand_name()
+            {
+                None => {
+                    // ¯\_(ツ)_/¯
+                }
+                Some(LIST) => {
+                    let entries = backend.entries()?;
+
+                    for entry in entries {
+                        println!(
+                            "{} {}",
+                            entry.id.as_int(),
+                            entry.title.unwrap_or_else(|| "UNTITLED".to_owned())
+                        );
+                    }
+                }
+                Some(SHOW) => {
+                    let id: i64 = entries_matches.subcommand_matches(SHOW).unwrap().value_of("entry_id").unwrap().parse()?;
+                    let entry = match backend.get_entry(id)? {
+                        Some(entry) => entry,
+                        None => {
+                            bail!("Entry not found");
+                        }
+                    };
+
+                    match entry.content {
+                        Some(s) => {
+                            println!("{}", s);
+                        }
+                        None => {
+                            bail!("No content");
+                        }
+                    }
+                }
+                Some(_) => {
+                    // ¯\_(ツ)_/¯
+                }
+            }
+        }
+        Some(_) => {
+            unreachable!();
         }
     }
 

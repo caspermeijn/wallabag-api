@@ -10,7 +10,7 @@ use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 
 // local imports
-use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, ResponseError};
+use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, CodeMessage, ResponseError};
 use crate::types::{
     Annotation, AnnotationRows, Annotations, Config, DeletedEntry, DeletedTag, Entries,
     EntriesFilter, Entry, ExistsInfo, ExistsResponse, Format, NewAnnotation, NewEntry,
@@ -246,7 +246,16 @@ impl Client {
                 Err(ClientError::Forbidden(info))
             }
             StatusCode::NOT_FOUND => {
-                let info: ResponseCodeMessageError = response.json()?;
+                println!("NOT FOUND {:?}", response.text());
+                let info: ResponseCodeMessageError = match response.json() {
+                    Ok(info) => info,
+                    Err(_) => ResponseCodeMessageError {
+                        error: CodeMessage {
+                            code: 404,
+                            message: "Not supplied".to_owned(),
+                        }
+                    }
+                };
                 Err(ClientError::NotFound(info))
             }
             StatusCode::NOT_MODIFIED => {

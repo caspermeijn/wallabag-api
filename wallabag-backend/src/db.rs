@@ -189,6 +189,26 @@ impl DB {
         Ok(())
     }
 
+    /// Get all entries from the database. Does not include content or annotations. (entry.content
+    /// and entry.annotations will always be None)
+    pub fn get_all_entries(&self) -> Fallible<Entries> {
+        let conn = self.conn()?;
+
+        // query and display the tags
+        let mut stmt = conn.prepare(
+            r#"SELECT id, "", created_at, domain_name, http_status,
+            is_archived, is_public, is_starred, language, mimetype, origin_url,
+            preview_picture, published_at, published_by, reading_time,
+            starred_at, title, uid, updated_at, url, headers, user_email,
+            user_id, user_name, tags from entries"#,
+        )?;
+
+        let results = stmt.query_and_then(NO_PARAMS, row_to_entry)?;
+
+        results.collect()
+    }
+
+    /// Get all entries from the database have updated_at greater than or equal to `since`.
     pub fn get_entries_since(&self, since: DateTime<Utc>) -> Fallible<Entries> {
         let conn = self.conn()?;
 

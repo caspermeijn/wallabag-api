@@ -16,7 +16,7 @@ use serde_json;
 use log::debug;
 
 use wallabag_api::types::{
-    Annotation, Config as APIConfig, EntriesFilter, Entry, NewEntry, Tags, ID,
+    Annotation, Config as APIConfig, Entries, EntriesFilter, Entry, NewEntry, Tags, ID,
 };
 use wallabag_api::Client;
 
@@ -115,8 +115,18 @@ impl Backend {
     }
 
     /// Get a Vec of tags from the db.
+    pub fn get_entry<T: Into<ID>>(&self, id: T) -> Fallible<Option<Entry>> {
+        self.db.get_entry(id)
+    }
+
+    /// Get a Vec of tags from the db.
     pub fn tags(&self) -> Fallible<Tags> {
         self.db.get_tags()
+    }
+
+    /// Get a Vec of entries from the db.
+    pub fn entries(&self) -> Fallible<Entries> {
+        self.db.get_all_entries()
     }
 
     /// Add a new url and attempts to upload and create entry immediatedly. Fails if network
