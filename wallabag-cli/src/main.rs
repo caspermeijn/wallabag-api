@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::Read;
 use std::fmt;
 
@@ -138,7 +138,7 @@ fn main() -> Fallible<()> {
             location: Some(Level::Error),
             time_format: None,
         },
-        File::create(config.cli.log_file)?,
+        OpenOptions::new().create(true).append(true).open(config.cli.log_file)?,
     )?;
 
     let mut backend = Backend::new_with_conf(config.backend)?;
