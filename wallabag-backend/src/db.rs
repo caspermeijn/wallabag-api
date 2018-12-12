@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
@@ -124,6 +125,35 @@ impl DB {
         results.collect()
     }
 
+    /// Get a set of IDs of all annotations in the database.
+    pub fn get_all_annotation_ids(&self) -> Fallible<HashSet<ID>> {
+        let conn = self.conn()?;
+
+        // query and display the tags
+        let mut stmt = conn.prepare("SELECT id from annotations")?;
+
+        let results = stmt.query_and_then(NO_PARAMS, |row| -> Fallible<ID> {
+            Ok(ID(row.get_checked(0)?))
+        })?;
+
+        results.collect()
+    }
+
+
+    /// Get a set of IDs of all entries in the database.
+    pub fn get_all_entry_ids(&self) -> Fallible<HashSet<ID>> {
+        let conn = self.conn()?;
+
+        // query and display the tags
+        let mut stmt = conn.prepare("SELECT id from entries")?;
+
+        let results = stmt.query_and_then(NO_PARAMS, |row| -> Fallible<ID> {
+            Ok(ID(row.get_checked(0)?))
+        })?;
+
+        results.collect()
+    }
+
     /// Get all new annotations from the DB. Returns a tuple of (entry_id as ID, local id of new
     /// annotation in db, NewAnnotation object).
     pub fn get_new_annotations(&self) -> Fallible<Vec<(ID, i64, NewAnnotation)>> {
@@ -136,12 +166,14 @@ impl DB {
         let results =
             stmt.query_and_then(NO_PARAMS, |row| -> Fallible<(ID, i64, NewAnnotation)> {
                 Ok((
-                    ID(row.get(4)),
-                    row.get(0),
+                    ID(row.get_checked(4)?),
+                    row.get_checked(0)?,
                     NewAnnotation {
-                        quote: row.get(1),
-                        ranges: serde_json::from_str::<Vec<Range>>(&row.get::<usize, String>(2))?,
-                        text: row.get(3),
+                        quote: row.get_checked(1)?,
+                        ranges: serde_json::from_str::<Vec<Range>>(
+                            &row.get_checked::<usize, String>(2)?,
+                        )?,
+                        text: row.get_checked(3)?,
                     },
                 ))
             })?;
@@ -172,6 +204,24 @@ impl DB {
         let results = stmt.query_and_then(&[since.to_rfc3339()], row_to_entry)?;
 
         results.collect()
+    }
+
+    /// Remove an entry from the database. Should only be called from a sync procedure otherwise
+    /// this delete action will not be synced.
+    pub fn delete_entry<T: Into<ID>>(&self, id: T) -> Fallible<()> {
+        self.conn()?
+            .execute("DELETE FROM entries WHERE id = ?", &[&id.into().as_int()])?;
+
+        Ok(())
+    }
+
+    /// Remove an annotation from the database. Should only be called from a sync procedure
+    /// otherwise this delete action will not be synced.
+    pub fn delete_annotation<T: Into<ID>>(&self, id: T) -> Fallible<()> {
+        self.conn()?
+            .execute("DELETE FROM annotations WHERE id = ?", &[&id.into().as_int()])?;
+
+        Ok(())
     }
 
     pub fn get_new_urls(&self) -> Fallible<Vec<DbNewUrl>> {
@@ -268,15 +318,17 @@ impl DB {
 
     /// Get the last time a sync was performed. used for optimization by the
     /// for syncing.
-    pub fn get_last_sync(&self) -> Fallible<chrono::ParseResult<DateTime<Utc>>> {
-        Ok(self.conn()?.query_row(
+    pub fn get_last_sync(&self) -> Fallible<DateTime<Utc>> {
+        self.conn()?.query_row(
             "SELECT (last_sync) FROM config WHERE id = 1",
             NO_PARAMS,
-            |row| {
-                DateTime::parse_from_rfc3339(&row.get::<usize, String>(0))
-                    .map(|dt| dt.with_timezone(&Utc))
+            |row| -> Fallible<DateTime<Utc>> {
+                Ok(
+                    DateTime::parse_from_rfc3339(&row.get_checked::<usize, String>(0)?)
+                        .map(|dt| dt.with_timezone(&Utc))?,
+                )
             },
-        )?)
+        )?
     }
 
     /// Sets the last sync time to now.
@@ -437,46 +489,46 @@ fn extract_result<T, U>(x: Option<Result<T, U>>) -> Result<Option<T>, U> {
 /// ordering. See the queries where this is used for a template.
 fn row_to_entry<'r, 's, 't0>(row: &'r Row<'s, 't0>) -> Fallible<Entry> {
     Ok(Entry {
-        id: ID(row.get(0)),
-        content: row.get(1),
-        created_at: DateTime::parse_from_rfc3339(&row.get::<usize, String>(2))
+        id: ID(row.get_checked(0)?),
+        content: row.get_checked(1)?,
+        created_at: DateTime::parse_from_rfc3339(&row.get_checked::<usize, String>(2)?)
             .map(|dt| dt.with_timezone(&Utc))?,
-        domain_name: row.get(3),
-        http_status: row.get(4),
-        is_archived: row.get(5),
-        is_public: row.get(6),
-        is_starred: row.get(7),
-        language: row.get(8),
-        mimetype: row.get(9),
-        origin_url: row.get(10),
-        preview_picture: row.get(11),
+        domain_name: row.get_checked(3)?,
+        http_status: row.get_checked(4)?,
+        is_archived: row.get_checked(5)?,
+        is_public: row.get_checked(6)?,
+        is_starred: row.get_checked(7)?,
+        language: row.get_checked(8)?,
+        mimetype: row.get_checked(9)?,
+        origin_url: row.get_checked(10)?,
+        preview_picture: row.get_checked(11)?,
         published_at: extract_result(
-            row.get::<usize, Option<String>>(12)
+            row.get_checked::<usize, Option<String>>(12)?
                 .map(|row| DateTime::parse_from_rfc3339(&row).map(|dt| dt.with_timezone(&Utc))),
         )?,
         published_by: extract_result(
-            row.get::<usize, Option<String>>(13)
+            row.get_checked::<usize, Option<String>>(13)?
                 .map(|row| serde_json::from_str::<Vec<String>>(&row)),
         )?,
-        reading_time: row.get(14),
+        reading_time: row.get_checked(14)?,
         starred_at: extract_result(
-            row.get::<usize, Option<String>>(15)
+            row.get_checked::<usize, Option<String>>(15)?
                 .map(|row| DateTime::parse_from_rfc3339(&row).map(|dt| dt.with_timezone(&Utc))),
         )?,
-        title: row.get(16),
-        uid: row.get(17),
-        updated_at: DateTime::parse_from_rfc3339(&row.get::<usize, String>(18))
+        title: row.get_checked(16)?,
+        uid: row.get_checked(17)?,
+        updated_at: DateTime::parse_from_rfc3339(&row.get_checked::<usize, String>(18)?)
             .map(|dt| dt.with_timezone(&Utc))?,
-        url: row.get(19),
+        url: row.get_checked(19)?,
         headers: extract_result(
-            row.get::<usize, Option<String>>(20)
+            row.get_checked::<usize, Option<String>>(20)?
                 .map(|row| serde_json::from_str::<Vec<String>>(&row)),
         )?,
-        user_email: row.get(21),
-        user_id: ID(row.get(22)),
-        user_name: row.get(23),
+        user_email: row.get_checked(21)?,
+        user_id: ID(row.get_checked(22)?),
+        user_name: row.get_checked(23)?,
         annotations: None, // NOTE: annotations are not loaded on purpose
-        tags: serde_json::from_str::<Tags>(&row.get::<usize, String>(24))?,
+        tags: serde_json::from_str::<Tags>(&row.get_checked::<usize, String>(24)?)?,
     })
 }
 
@@ -484,16 +536,16 @@ fn row_to_entry<'r, 's, 't0>(row: &'r Row<'s, 't0>) -> Fallible<Entry> {
 /// ordering. See the queries where this is used for a template.
 fn row_to_ann<'r, 's, 't0>(row: &'r Row<'s, 't0>) -> Fallible<Annotation> {
     Ok(Annotation {
-        id: ID(row.get(0)),
-        annotator_schema_version: row.get(1),
-        created_at: DateTime::parse_from_rfc3339(&row.get::<usize, String>(2))
+        id: ID(row.get_checked(0)?),
+        annotator_schema_version: row.get_checked(1)?,
+        created_at: DateTime::parse_from_rfc3339(&row.get_checked::<usize, String>(2)?)
             .map(|dt| dt.with_timezone(&Utc))?,
-        ranges: serde_json::from_str::<Vec<Range>>(&row.get::<usize, String>(3))?,
-        text: row.get(4),
-        updated_at: DateTime::parse_from_rfc3339(&row.get::<usize, String>(5))
+        ranges: serde_json::from_str::<Vec<Range>>(&row.get_checked::<usize, String>(3)?)?,
+        text: row.get_checked(4)?,
+        updated_at: DateTime::parse_from_rfc3339(&row.get_checked::<usize, String>(5)?)
             .map(|dt| dt.with_timezone(&Utc))?,
-        quote: row.get(6),
-        user: row.get(7),
+        quote: row.get_checked(6)?,
+        user: row.get_checked(7)?,
     })
 }
 

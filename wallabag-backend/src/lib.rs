@@ -47,7 +47,7 @@ fn default_db_file() -> PathBuf {
 #[derive(Debug)]
 pub struct Backend {
     db: DB,
-    client: Client
+    client: Client,
 }
 
 #[derive(Debug)]
@@ -107,7 +107,6 @@ impl Backend {
         Ok(())
     }
 
-
     pub fn init(&self) -> Fallible<()> {
         self.db.init()?;
         debug!("DB init success");
@@ -143,9 +142,105 @@ impl Backend {
     ///
     /// For entries and annotations existing in the database, object with latest
     /// updated_at value wins.
-    pub fn full_sync(&self) -> Fallible<()> {
-        // TODO
-        unimplemented!()
+    ///
+    /// Tags are tied to Entries, even though the tags will also have seperate db tables dedicated
+    /// to them. An updated tag should mean an updated updated_at field in an entry.
+    ///
+    /// NOTE: changing tags on an entry touches updated_at. To add a tag
+    /// locally, create a new tag object with an arbitrary `slug` and `id`,
+    /// add it to the Entry object, and save to db. taglinks and tags table
+    /// will be updated in next sync.
+    ///
+    /// NOTE: changing an annotation does not update entry updated_at
+    pub fn full_sync(&mut self) -> Fallible<()> {
+        // sync local deletes first otherwise entries will be re-created locally...
+        self.sync_local_deletes()?;
+
+        // get _all_ entries on the server
+        let server_entries = self.client.get_entries()?;
+
+        // used when syncing up locally updated entries/annotations to avoid syncing twice
+        let seen_entries: HashSet<ID> = server_entries.iter().map(|e| e.id).collect();
+        let tmp_empty_vec = vec![];
+        let seen_annotations: HashSet<ID> = server_entries
+            .iter()
+            .map(|e| {
+                e.annotations
+                    .as_ref()
+                    .unwrap_or(&tmp_empty_vec)
+                    .iter()
+                    .map(|a| a.id)
+            })
+            .flatten()
+            .collect();
+
+        for remote_entry in server_entries.into_iter() {
+            // first check if existing entry with same id
+            if let Some(saved_entry) = self.db.get_entry(remote_entry.id.as_int())? {
+                match Ord::cmp(&saved_entry.updated_at, &remote_entry.updated_at) {
+                    Less => {
+                        // saved entry is older than pulled version; overwrite
+                        self.pull_entry(remote_entry)?;
+                    }
+                    Equal => {
+                        // already synced and same version
+                        // still need to sync annotations though
+                        if let Some(ref anns) = remote_entry.annotations {
+                            for ann in anns {
+                                self.sync_annotation(ann, &remote_entry)?;
+                            }
+                        }
+                    }
+                    Greater => {
+                        // local entry is newer, push to server
+                        let updated_entry = self
+                            .client
+                            .update_entry(saved_entry.id, &(&saved_entry).into())?;
+                        // run pull entry on the entry returned to sync any new tags
+                        self.pull_entry(updated_entry)?;
+                    }
+                }
+            } else {
+                self.pull_entry(remote_entry)?;
+            }
+        }
+
+        // delete all local entries that have been deleted on the server
+        let local_entries: HashSet<ID> = self.db.get_all_entry_ids()?;
+        let remotely_deleted_entries = HashSet::difference(&local_entries, &seen_entries);
+        for entry_id in remotely_deleted_entries {
+            self.db.delete_entry(*entry_id)?;
+        }
+
+        // delete all local annotations that have been deleted on the server
+        let local_anns: HashSet<ID> = self.db.get_all_annotation_ids()?;
+        let remotely_deleted_anns = HashSet::difference(&local_anns, &seen_annotations);
+        for ann_id in remotely_deleted_anns {
+            self.db.delete_annotation(*ann_id)?;
+        }
+
+        // finally push new things to the server
+        for DbNewUrl { id, url } in self.db.get_new_urls()? {
+            let new_entry = NewEntry::new_with_url(url);
+            let entry = self.client.create_entry(&new_entry)?;
+            self.pull_entry(entry)?;
+            self.db.remove_new_url(id)?;
+        }
+
+        for (entry_id, new_ann_id, new_ann) in self.db.get_new_annotations()? {
+            let ann = self.client.create_annotation(entry_id, new_ann)?;
+            self.db.save_annotation(&ann, entry_id)?;
+            self.db.remove_new_annotation(new_ann_id)?;
+        }
+
+        // last of all drop tags with no tag_links
+        self.db.delete_unused_tags()?;
+
+        // Touch the last sync time ready for next sync.
+        // This must be done last to ensure the sync has successfully completed.
+        self.db.touch_last_sync()?;
+
+        Ok(())
     }
 
     /// Normal sync. Syncs everything changed since the last sync, with the
@@ -160,12 +255,17 @@ impl Backend {
     /// - Entries deleted server-side.
     /// - Annotations deleted server-side.
     /// - Annotations updated or created server-side that are not associated
-    ///   with entries updated since previous sync.
+    ///   with entries updated since previous sync. (ie. recently updated annotations on
+    ///   non-recently updated entries)
     ///
+    /// TODO: ignore errors relating to actions that have already been done - eg. 404 error on
+    /// client delete entry.
     pub fn sync(&mut self) -> Fallible<()> {
+        self.sync_local_deletes()?;
+
         // Sync entries recently updated server-side. Entries have tag links and annotations embedded.
         let mut filter = EntriesFilter::default();
-        let since = self.db.get_last_sync()??;
+        let since = self.db.get_last_sync()?;
         filter.since = since.timestamp() as u64;
         let entries = self.client.get_entries_with_filter(filter)?;
 
@@ -184,35 +284,36 @@ impl Backend {
             .flatten()
             .collect();
 
-        // NOTE: changing tags on an entry touches updated_at. To add a tag
-        // locally, create a new tag object with an arbitrary `slug` and `id`,
-        // add it to the Entry object, and save to db. taglinks and tags table
-        // will be updated in next sync.
-        // NOTE: changing an annotation does not update entry updated_at
-
-        // NOTE: this will not get annotations where annotation has been updated recently but not
-        // the associated entry
-        for entry in entries.into_iter() {
+        // sync recently updated entries
+        for remote_entry in entries.into_iter() {
             // first check if existing entry with same id
-            if let Some(saved_entry) = self.db.get_entry(entry.id.as_int())? {
-                match Ord::cmp(&saved_entry.updated_at, &entry.updated_at) {
+            if let Some(saved_entry) = self.db.get_entry(remote_entry.id.as_int())? {
+                match Ord::cmp(&saved_entry.updated_at, &remote_entry.updated_at) {
                     Less => {
                         // saved entry is older than pulled version; overwrite
-                        self.pull_entry(entry)?;
+                        self.pull_entry(remote_entry)?;
                     }
                     Equal => {
-                        // noop; already synced and same version
+                        // already synced and same version
+                        // still need to sync annotations though
+                        if let Some(ref anns) = remote_entry.annotations {
+                            for ann in anns {
+                                self.sync_annotation(ann, &remote_entry)?;
+                            }
+                        }
                     }
                     Greater => {
                         // local entry is newer, push to server
-                        let updated_entry =
-                            self.client.update_entry(saved_entry.id, &(&saved_entry).into())?;
-                        // run pull entry on the entry returned to sync any new tags
+                        let updated_entry = self
+                            .client
+                            .update_entry(saved_entry.id, &(&saved_entry).into())?;
+                        // run pull entry on the entry returned to sync any new tags and
+                        // update annotations
                         self.pull_entry(updated_entry)?;
                     }
                 }
             } else {
-                self.pull_entry(entry)?;
+                self.pull_entry(remote_entry)?;
             }
         }
 
@@ -228,16 +329,6 @@ impl Backend {
             if !seen_annotations.contains(&ann.id) {
                 self.client.update_annotation(&ann)?;
             }
-        }
-
-        // track and sync client-side deletes.
-        for entry_id in self.db.get_entry_deletes()? {
-            self.client.delete_entry(entry_id)?;
-            self.db.remove_delete_entry(entry_id)?;
-        }
-        for annotation_id in self.db.get_annotation_deletes()? {
-            self.client.delete_annotation(annotation_id)?;
-            self.db.remove_delete_annotation(annotation_id)?;
         }
 
         // finally push new things to the server
@@ -286,12 +377,26 @@ impl Backend {
         Ok(())
     }
 
+    /// Push up all local delete actions.
+    fn sync_local_deletes(&mut self) -> Fallible<()> {
+        // Track and sync client-side deletes. This needs to be done before pulling
+        // entries/annotations otherwise they will simply be re-created.
+        // Delete annotation deletes before entry deletes to avoid 404s.
+        // TODO: ignore not found errors here
+        for annotation_id in self.db.get_annotation_deletes()? {
+            self.client.delete_annotation(annotation_id)?;
+            self.db.remove_delete_annotation(annotation_id)?;
+        }
+        for entry_id in self.db.get_entry_deletes()? {
+            self.client.delete_entry(entry_id)?;
+            self.db.remove_delete_entry(entry_id)?;
+        }
+
+        Ok(())
+    }
+
     /// sync an annotation given an annotation from the server.
-    fn sync_annotation<T: Into<ID>>(
-        &mut self,
-        ann: &Annotation,
-        entry_id: T,
-    ) -> Fallible<()> {
+    fn sync_annotation<T: Into<ID>>(&mut self, ann: &Annotation, entry_id: T) -> Fallible<()> {
         let entry_id = entry_id.into().as_int();
         if let Some(saved_ann) = self.db.get_annotation(ann.id.as_int())? {
             match Ord::cmp(&saved_ann.updated_at, &ann.updated_at) {
