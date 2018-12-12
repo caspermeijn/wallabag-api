@@ -82,11 +82,11 @@ fn main() -> Fallible<()> {
             println!(":: No subcommand given.");
         }
         Some(INIT) => {
-            println!(":: Initing the database...");
+            println!(":: Initing the database.");
             backend.init()?;
         }
         Some(RESET) => {
-            println!(":: Resetting the database to a clean state...");
+            println!(":: Resetting the database to a clean state.");
             backend.reset()?;
         }
         Some(SYNC) => {

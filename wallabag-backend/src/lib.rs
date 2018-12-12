@@ -143,6 +143,7 @@ impl Backend {
     /// For entries and annotations existing in the database, object with latest
     /// updated_at value wins.
     pub fn full_sync(&self) -> Fallible<()> {
+        // TODO
         unimplemented!()
     }
 
@@ -192,7 +193,7 @@ impl Backend {
         // the associated entry
         for entry in entries.into_iter() {
             // first check if existing entry with same id
-            if let Some(saved_entry) = self.db.get_entry(entry.id.as_u32())? {
+            if let Some(saved_entry) = self.db.get_entry(entry.id.as_int())? {
                 match Ord::cmp(&saved_entry.updated_at, &entry.updated_at) {
                     Less => {
                         // saved entry is older than pulled version; overwrite
@@ -290,8 +291,8 @@ impl Backend {
         ann: &Annotation,
         entry_id: T,
     ) -> Fallible<()> {
-        let entry_id = entry_id.into().as_u32();
-        if let Some(saved_ann) = self.db.get_annotation(ann.id.as_u32())? {
+        let entry_id = entry_id.into().as_int();
+        if let Some(saved_ann) = self.db.get_annotation(ann.id.as_int())? {
             match Ord::cmp(&saved_ann.updated_at, &ann.updated_at) {
                 Less => {
                     // saved annotation is older than pulled version; overwrite
