@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use chrono::{DateTime, Utc};
 use failure::Fallible;
 use rusqlite::types::ToSql;
-use rusqlite::Result as SQLResult;
 use rusqlite::{Connection, OpenFlags, Row, NO_PARAMS};
 use serde_json;
 
@@ -105,15 +104,9 @@ impl DB {
             updated_at, quote, user from annotations where id = ?"#,
         )?;
 
-        let mut results = stmt.query_map(&[&id.into().as_int()], row_to_ann)?;
+        let mut results = stmt.query_and_then(&[&id.into().as_int()], row_to_ann)?;
 
-        match results.next() {
-            Some(thing) => match thing {
-                Ok(err_ann) => Ok(Some(err_ann?)),
-                Err(e) => Err(e.into()),
-            },
-            None => Ok(None),
-        }
+        extract_result(results.next())
     }
 
     /// Get all annotations updated since a given date. Useful for syncing purposes.
@@ -126,14 +119,9 @@ impl DB {
             updated_at, quote, user from annotations where updated_at >= ?"#,
         )?;
 
-        let results = stmt.query_map(&[since.to_rfc3339()], row_to_ann)?;
+        let results = stmt.query_and_then(&[since.to_rfc3339()], row_to_ann)?;
 
-        let mut anns = vec![];
-        for maybe_maybe_ann in results {
-            anns.push(maybe_maybe_ann??);
-        }
-
-        Ok(anns)
+        results.collect()
     }
 
     /// Get all new annotations from the DB. Returns a tuple of (entry_id as ID, local id of new
@@ -145,24 +133,20 @@ impl DB {
         let mut stmt =
             conn.prepare("SELECT id, quote, ranges, text, entry_id from new_annotations")?;
 
-        let results = stmt.query_map(NO_PARAMS, |row| -> Fallible<(ID, i64, NewAnnotation)> {
-            Ok((
-                ID(row.get(4)),
-                row.get(0),
-                NewAnnotation {
-                    quote: row.get(1),
-                    ranges: serde_json::from_str::<Vec<Range>>(&row.get::<usize, String>(2))?,
-                    text: row.get(3),
-                },
-            ))
-        })?;
+        let results =
+            stmt.query_and_then(NO_PARAMS, |row| -> Fallible<(ID, i64, NewAnnotation)> {
+                Ok((
+                    ID(row.get(4)),
+                    row.get(0),
+                    NewAnnotation {
+                        quote: row.get(1),
+                        ranges: serde_json::from_str::<Vec<Range>>(&row.get::<usize, String>(2))?,
+                        text: row.get(3),
+                    },
+                ))
+            })?;
 
-        let mut things = vec![];
-        for thing in results {
-            things.push(thing??);
-        }
-
-        Ok(things)
+        results.collect()
     }
 
     /// Remove a new annotation entry from db, signifying that it has been synced.
@@ -185,14 +169,9 @@ impl DB {
             user_id, user_name, tags from entries WHERE updated_at >= ?"#,
         )?;
 
-        let results = stmt.query_map(&[since.to_rfc3339()], row_to_entry)?;
+        let results = stmt.query_and_then(&[since.to_rfc3339()], row_to_entry)?;
 
-        let mut entries = vec![];
-        for entry in results {
-            entries.push(entry??);
-        }
-
-        Ok(entries)
+        results.collect()
     }
 
     pub fn get_new_urls(&self) -> Fallible<Vec<DbNewUrl>> {
@@ -200,19 +179,14 @@ impl DB {
 
         // query and display the tags
         let mut stmt = conn.prepare("SELECT id, url FROM new_urls")?;
-        let results = stmt.query_map(NO_PARAMS, |row| -> Fallible<DbNewUrl> {
+        let results = stmt.query_and_then(NO_PARAMS, |row| -> Fallible<DbNewUrl> {
             Ok(DbNewUrl {
                 id: row.get_checked(0)?,
                 url: row.get_checked(1)?,
             })
         })?;
 
-        let mut urls = vec![];
-        for row in results {
-            urls.push(row??);
-        }
-
-        Ok(urls)
+        results.collect()
     }
 
     /// Remove a new url entry from the db, signifying that it has been successfully synced.
@@ -236,16 +210,11 @@ impl DB {
 
         // query and display the tags
         let mut stmt = conn.prepare("SELECT id FROM deleted_annotations")?;
-        let results = stmt.query_map(NO_PARAMS, |row| -> Fallible<ID> {
+        let results = stmt.query_and_then(NO_PARAMS, |row| -> Fallible<ID> {
             Ok(ID(row.get_checked(0)?))
         })?;
 
-        let mut things = vec![];
-        for row in results {
-            things.push(row??);
-        }
-
-        Ok(things)
+        results.collect()
     }
 
     /// Remove an annotation from the delteed entries table. This marks a local delete as synced.
@@ -263,16 +232,11 @@ impl DB {
 
         // query and display the tags
         let mut stmt = conn.prepare("SELECT id FROM deleted_entries")?;
-        let results = stmt.query_map(NO_PARAMS, |row| -> Fallible<ID> {
+        let results = stmt.query_and_then(NO_PARAMS, |row| -> Fallible<ID> {
             Ok(ID(row.get_checked(0)?))
         })?;
 
-        let mut things = vec![];
-        for row in results {
-            things.push(row??);
-        }
-
-        Ok(things)
+        results.collect()
     }
 
     /// Remove an entry from the delteed entries table. This marks a local delete as synced.
@@ -298,16 +262,8 @@ impl DB {
             user_id, user_name, tags FROM entries WHERE id = ?"#,
         )?;
 
-        let mut results = stmt.query_map(&[&id.into().as_int()], row_to_entry)?;
-
-        // extract maybe the first row
-        match results.next() {
-            Some(thing) => match thing {
-                Ok(err_entry) => Ok(Some(err_entry?)),
-                Err(e) => Err(e.into()),
-            },
-            None => Ok(None),
-        }
+        let mut results = stmt.query_and_then(&[&id.into().as_int()], row_to_entry)?;
+        extract_result(results.next())
     }
 
     /// Get the last time a sync was performed. used for optimization by the
@@ -455,7 +411,7 @@ impl DB {
         let sql = "SELECT id, label, slug FROM tags";
         log_sql(sql);
         let mut stmt = conn.prepare(sql)?;
-        let results = stmt.query_map(NO_PARAMS, |row| -> Fallible<Tag> {
+        let results = stmt.query_and_then(NO_PARAMS, |row| -> Fallible<Tag> {
             Ok(Tag {
                 id: ID(row.get_checked(0)?),
                 label: row.get_checked(1)?,
@@ -463,12 +419,7 @@ impl DB {
             })
         })?;
 
-        let mut tags = vec![];
-        for maybe_maybe_tag in results {
-            tags.push(maybe_maybe_tag??);
-        }
-
-        Ok(tags)
+        results.collect()
     }
 }
 
