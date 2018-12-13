@@ -62,7 +62,7 @@ fn main() -> Result<(), failure::Error> {
         simplelog::LevelFilter::Debug,
         simplelog::Config::default(),
         File::create("wallabag-tui.log").unwrap(),
-    );
+    )?;
 
     // Terminal initialization
     let stdout = io::stdout().into_raw_mode()?;
@@ -82,7 +82,7 @@ fn main() -> Result<(), failure::Error> {
         .get_entries()
         .unwrap()
         .into_iter()
-        .map(|entry| entry.title.unwrap_or("untitled".to_owned()))
+        .map(|entry| entry.title.unwrap_or_else(|| "UNTITLED".to_owned()))
         .collect();
 
     loop {

@@ -14,7 +14,7 @@ impl fmt::Display for ID {
 }
 
 impl ID {
-    pub fn as_int(&self) -> i64 {
+    pub fn as_int(self) -> i64 {
         self.0
     }
 }
@@ -22,7 +22,7 @@ impl ID {
 /// For convenience.
 impl From<i32> for ID {
     fn from(x: i32) -> Self {
-        ID(x as i64)
+        ID(i64::from(x))
     }
 }
 

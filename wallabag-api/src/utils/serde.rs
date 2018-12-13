@@ -5,9 +5,12 @@ use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serializer};
 use serde_derive::Deserialize;
 
-/// Used to serialize the boolean values to pseudo-bool integers. The api
-/// appears to support actual bool, but probably should follow the api docs just
-/// in case.
+/// Used to serialize the boolean values to pseudo-bool integers. The api appears to support actual
+/// bool, but probably should follow the api docs just in case.
+///
+/// Note: needs to accept a reference even though it's more efficient to copy. It's how serde
+/// works.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 pub(crate) fn bool_to_int<S>(x: &Option<bool>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -64,7 +67,7 @@ where
         StringInt::Int(i) => Ok(i),
         StringInt::String(s) => match s.parse::<u32>() {
             Ok(i) => Ok(i),
-            Err(e) => Err(DeError::custom(format!(
+            Err(_) => Err(DeError::custom(format!(
                 "Could not deserialize {}
                 as u32",
                 s

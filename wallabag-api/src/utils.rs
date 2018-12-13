@@ -15,7 +15,6 @@ pub(crate) enum EndPoint {
     Tags,
     TagsLabel,
     TagLabel,
-    EntriesList,
     DeleteEntryTag(ID, ID), // entry id, tag id
     EntryReload(ID),
     EntryTags(ID), // entry id
@@ -40,7 +39,6 @@ impl fmt::Display for EndPoint {
                 Tags => "/api/tags.json".to_owned(),
                 TagsLabel => "/api/tags/label.json".to_owned(),
                 TagLabel => "/api/tag/label.json".to_owned(),
-                EntriesList => "/api/entries/lists.json".to_owned(),
                 DeleteEntryTag(entry, tag) => format!("/api/entries/{}/tags/{}.json", entry, tag),
                 EntryReload(id) => format!("/api/entries/{}/reload.json", id),
                 EntryTags(id) => format!("/api/entries/{}/tags.json", id),
@@ -61,7 +59,7 @@ pub(crate) struct UrlBuilder {
 
 impl UrlBuilder {
     pub(crate) fn new(base_url: String) -> Self {
-        UrlBuilder { base_url }
+        Self { base_url }
     }
 
     /// Build a full URL given an endpoint to use.

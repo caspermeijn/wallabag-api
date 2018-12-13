@@ -39,7 +39,7 @@ impl NewEntry {
     /// Create a new entry with a url (url is the only mandatory field). The
     /// rest of the fields will be populated with `None`.
     pub fn new_with_url(url: String) -> Self {
-        NewEntry {
+        Self {
             url,
             title: None,
             tags: None,

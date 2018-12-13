@@ -49,7 +49,7 @@ impl fmt::Display for ClientError {
             SerdeJsonError(e) => {
                 format!("Error deserializing json: {}", e)
             }
-            _ => "¯\\_(ツ)_/¯".to_owned(),
+            e => format!("{:?}", e),
         })
     }
 }
@@ -61,13 +61,31 @@ impl Error for ClientError {}
 
 // so we can use ? with reqwest in methods and still return ClientError
 impl From<reqwest::Error> for ClientError {
-    fn from(err: reqwest::Error) -> ClientError {
+    fn from(err: reqwest::Error) -> Self {
         ClientError::ReqwestError(err)
     }
 }
 
 impl From<serde_json::error::Error> for ClientError {
-    fn from(err: serde_json::error::Error) -> ClientError {
+    fn from(err: serde_json::error::Error) -> Self {
         ClientError::SerdeJsonError(err)
     }
 }
+
+/// Represents possible errors building a `TagString`.
+#[derive(Debug)]
+pub enum TagStringError {
+    ContainsComma,
+}
+
+impl fmt::Display for TagStringError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", match self {
+            TagStringError::ContainsComma => {
+                "Contains comma (invalid character)"
+            }
+        })
+    }
+}
+
+impl Error for TagStringError {}

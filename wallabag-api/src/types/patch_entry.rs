@@ -38,7 +38,7 @@ pub struct PatchEntry {
 impl From<&Entry> for PatchEntry {
     fn from(entry: &Entry) -> Self {
         let tags: Vec<String> = entry.tags.iter().map(|t| t.label.clone()).collect();
-        PatchEntry {
+        Self {
             title: entry.title.clone(),
             tags: Some(tags),
             archive: Some(entry.is_archived),
@@ -47,7 +47,7 @@ impl From<&Entry> for PatchEntry {
             content: entry.content.clone(),
             language: entry.language.clone(),
             preview_picture: entry.preview_picture.clone(),
-            published_at: entry.published_at.clone(),
+            published_at: entry.published_at,
             authors: None,
             origin_url: entry.origin_url.clone(),
         }

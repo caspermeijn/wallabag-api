@@ -10,7 +10,9 @@ use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
 
 // local imports
-use crate::errors::{ClientError, ClientResult, ResponseCodeMessageError, CodeMessage, ResponseError};
+use crate::errors::{
+    ClientError, ClientResult, CodeMessage, ResponseCodeMessageError, ResponseError,
+};
 use crate::types::{
     Annotation, AnnotationRows, Annotations, Config, DeletedEntry, DeletedTag, Entries,
     EntriesFilter, Entry, ExistsInfo, ExistsResponse, Format, NewAnnotation, NewEntry,
@@ -33,10 +35,9 @@ pub struct Client {
 }
 
 impl Client {
-
     /// Build a new client given the configuration.
     pub fn new(config: Config) -> Self {
-        Client {
+        Self {
             client_id: config.client_id,
             client_secret: config.client_secret,
             username: config.username,
@@ -50,12 +51,11 @@ impl Client {
     /// Internal method to get a valid access token. If no access token loaded
     /// yet, then get a new one.
     fn get_token(&mut self) -> ClientResult<String> {
-        match self.token_info {
-            Some(ref t) => Ok(t.access_token.clone()),
-            None => {
-                debug!("No api token loaded yet");
-                self.load_token()
-            }
+        if let Some(ref t) = self.token_info {
+            Ok(t.access_token.clone())
+        } else {
+            debug!("No api token loaded yet");
+            self.load_token()
         }
     }
 
@@ -160,18 +160,15 @@ impl Client {
     {
         let response_result = self.q(method.clone(), end_point, query, json, true);
 
-        match response_result {
-            Err(ClientError::ExpiredToken) => {
-                debug!("Token expired; refreshing");
-                self.refresh_token()?;
+        if let Err(ClientError::ExpiredToken) = response_result {
+            debug!("Token expired; refreshing");
+            self.refresh_token()?;
 
-                // try the request again now
-                return Ok(self.q(method, end_point, query, json, true)?);
-            }
-            _ => (),
+            // try the request again now
+            Ok(self.q(method, end_point, query, json, true)?)
+        } else {
+            Ok(response_result?)
         }
-
-        Ok(response_result?)
     }
 
     /// Just build and send a single request. Returns a json deserializable
@@ -255,8 +252,8 @@ impl Client {
                         error: CodeMessage {
                             code: 404,
                             message: "Not supplied".to_owned(),
-                        }
-                    }
+                        },
+                    },
                 };
                 Err(ClientError::NotFound(info))
             }
@@ -281,7 +278,7 @@ impl Client {
         // workaround: need to structure the params as a list of pairs since Vec
         // values are unsupported:
         // https://github.com/nox/serde_urlencoded/issues/46
-        for url in urls.into_iter() {
+        for url in urls {
             params.push(("urls[]".to_owned(), url.into()));
         }
 
@@ -379,13 +376,13 @@ impl Client {
     pub fn create_annotation<T: Into<ID>>(
         &mut self,
         entry_id: T,
-        annotation: NewAnnotation,
+        annotation: &NewAnnotation,
     ) -> ClientResult<Annotation> {
         self.smart_json_q(
             Method::POST,
             EndPoint::Annotation(entry_id.into()),
             UNIT,
-            &annotation,
+            annotation,
         )
     }
 
@@ -403,16 +400,16 @@ impl Client {
 
     /// Get all entries.
     pub fn get_entries(&mut self) -> ClientResult<Entries> {
-        self._get_entries(EntriesFilter::default())
+        self._get_entries(&EntriesFilter::default())
     }
 
     /// Get all entries, filtered by filter parameters.
-    pub fn get_entries_with_filter(&mut self, filter: EntriesFilter) -> ClientResult<Entries> {
+    pub fn get_entries_with_filter(&mut self, filter: &EntriesFilter) -> ClientResult<Entries> {
         self._get_entries(filter)
     }
 
     /// Does the actual work of retrieving the entries. Handles pagination.
-    fn _get_entries(&mut self, filter: EntriesFilter) -> ClientResult<Entries> {
+    fn _get_entries(&mut self, filter: &EntriesFilter) -> ClientResult<Entries> {
         let mut entries = Entries::new();
 
         // TODO: should change the number per page?
@@ -429,7 +426,7 @@ impl Client {
             let json: PaginatedEntries =
                 self.smart_json_q(Method::GET, EndPoint::Entries, &filter, UNIT)?;
 
-            entries.extend(json._embedded.items.into_iter());
+            entries.extend(json.embedded.items.into_iter());
 
             if json.page < json.pages {
                 filter.page = json.page + 1;

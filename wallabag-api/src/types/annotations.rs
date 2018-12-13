@@ -10,8 +10,8 @@ pub type Annotations = Vec<Annotation>;
 
 /// Represents an annotation as returned from the API.
 ///
-/// Annotations are in Annotatorjs format. https://annotatorjs.org/
-/// See http://docs.annotatorjs.org/en/v1.2.x/annotation-format.html for documentation on the
+/// Annotations are in Annotatorjs format. <https://annotatorjs.org/>
+/// See <http://docs.annotatorjs.org/en/v1.2.x/annotation-format.html> for documentation on the
 /// format.
 ///
 #[derive(Deserialize, Serialize, Debug)]

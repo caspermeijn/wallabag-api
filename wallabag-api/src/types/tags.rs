@@ -3,6 +3,7 @@ use std::fmt;
 use serde_derive::{Deserialize, Serialize};
 
 use super::common::ID;
+use crate::errors::TagStringError;
 
 /// List of tags declared for clarity.
 pub type Tags = Vec<Tag>;
@@ -54,13 +55,13 @@ impl fmt::Display for TagString {
 impl TagString {
     /// Create a new tag label, guaranteed to be a valid tag label. Returns None
     /// if invalid tag label.
-    pub fn new<T: Into<String>>(label: T) -> Option<Self> {
+    pub fn try_from<T: Into<String>>(label: T) -> Result<Self, TagStringError> {
         let label = label.into();
 
-        if label.as_str().contains(",") {
-            None
+        if label.as_str().contains(',') {
+            Err(TagStringError::ContainsComma)
         } else {
-            Some(TagString { label })
+            Ok(Self { label })
         }
     }
 

@@ -55,7 +55,7 @@ pub struct EntriesFilter {
 }
 
 /// Used to serialize the tags list as a comma separated string.
-fn vec_to_str<S>(vec: &Vec<String>, serializer: S) -> Result<S::Ok, S::Error>
+fn vec_to_str<S>(vec: &[String], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -67,7 +67,7 @@ where
 /// specified.
 impl Default for EntriesFilter {
     fn default() -> Self {
-        EntriesFilter {
+        Self {
             archive: None,
             starred: None,
             sort: SortBy::Created,

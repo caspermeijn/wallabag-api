@@ -238,7 +238,7 @@ impl Backend {
         }
 
         for (entry_id, new_ann_id, new_ann) in self.db.get_new_annotations()? {
-            let ann = self.client.create_annotation(entry_id, new_ann)?;
+            let ann = self.client.create_annotation(entry_id, &new_ann)?;
             self.db.save_annotation(&ann, entry_id)?;
             self.db.remove_new_annotation(new_ann_id)?;
         }
@@ -277,7 +277,7 @@ impl Backend {
         let mut filter = EntriesFilter::default();
         let since = self.db.get_last_sync()?;
         filter.since = since.timestamp() as u64;
-        let entries = self.client.get_entries_with_filter(filter)?;
+        let entries = self.client.get_entries_with_filter(&filter)?;
 
         // used when syncing up locally updated entries/annotations to avoid syncing twice
         let seen_entries: HashSet<ID> = entries.iter().map(|e| e.id).collect();
@@ -350,7 +350,7 @@ impl Backend {
         }
 
         for (entry_id, new_ann_id, new_ann) in self.db.get_new_annotations()? {
-            let ann = self.client.create_annotation(entry_id, new_ann)?;
+            let ann = self.client.create_annotation(entry_id, &new_ann)?;
             self.db.save_annotation(&ann, entry_id)?;
             self.db.remove_new_annotation(new_ann_id)?;
         }

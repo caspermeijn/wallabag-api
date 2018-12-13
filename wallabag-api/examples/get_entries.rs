@@ -1,6 +1,6 @@
 use std::env;
 
-use wallabag_api::types::{Config, EntriesFilter, Format, SortOrder};
+use wallabag_api::types::{Config, EntriesFilter, SortOrder};
 use wallabag_api::Client;
 
 pub fn main() {
@@ -20,6 +20,6 @@ pub fn main() {
     // edit filter options here
     filter.order = SortOrder::Asc;
 
-    let res = client.get_entries_with_filter(filter);
+    let res = client.get_entries_with_filter(&filter);
     println!("{:#?}", res);
 }

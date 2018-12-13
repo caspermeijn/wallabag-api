@@ -185,7 +185,8 @@ pub(crate) struct PaginatedEntries {
     pub page: u32,
     pub pages: u32,
     pub total: u32,
-    pub _embedded: EmbeddedEntries,
+    #[serde(rename = "_embedded")]
+    pub embedded: EmbeddedEntries,
 }
 
 /// Entries as stored in `PaginatedEntries`.

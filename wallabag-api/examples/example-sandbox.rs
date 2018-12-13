@@ -1,10 +1,11 @@
 use std::env;
-use std::thread;
-use std::time::Duration;
+// use std::thread;
+// use std::time::Duration;
 
-use wallabag_api::types::{
-    Config, Entry, Format, NewAnnotation, PatchEntry, Range, RegisterInfo, TagString, ID,
-};
+// use wallabag_api::types::{
+//     Config, Entry, Format, NewAnnotation, PatchEntry, Range, RegisterInfo, TagString, ID,
+// };
+use wallabag_api::types::Config;
 use wallabag_api::Client;
 
 pub fn main() {
@@ -13,12 +14,15 @@ pub fn main() {
         client_secret: env::var("WALLABAG_CLIENT_SECRET").expect("WALLABAG_CLIENT_SECRET not set"),
         username: env::var("WALLABAG_USERNAME").expect("WALLABAG_USERNAME not set"),
         password: env::var("WALLABAG_PASSWORD").expect("WALLABAG_PASSWORD not set"),
-        base_url:  env::var("WALLABAG_URL").expect("WALLABAG_URL not set"),
+        base_url: env::var("WALLABAG_URL").expect("WALLABAG_URL not set"),
     };
 
     println!("{:#?}", config);
 
     let mut client = Client::new(config);
+
+    let res = client.get_user();
+    println!("{:#?}", res);
 
     // let res = client.get_entry(1801067);
     // println!("{:#?}", res);
@@ -212,7 +216,4 @@ pub fn main() {
     //     20398,
     // );
     // println!("{:#?}", res);
-
-    //     let res = client.get_user();
-    //     println!("{:#?}", res);
 }
