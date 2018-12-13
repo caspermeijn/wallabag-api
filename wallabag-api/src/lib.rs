@@ -1,3 +1,5 @@
+//! TODO: add docs and usage examples
+
 mod client;
 pub mod errors;
 pub mod types;

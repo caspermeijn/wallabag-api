@@ -1,6 +1,9 @@
 
 # Wallabag Client Backend
 
+[![wallabag-backend crates.io][cratesio-image]][cratesio]
+[![wallabag-backend docs.rs][docsrs-image]][docsrs]
+
 Shared backend client library for [Wallabag][wallabag] client apps.
 
 ## About
@@ -40,3 +43,7 @@ be dual licensed as above, without any additional terms or conditions.
 
 
 [wallabag]: https://wallabag.org/
+[docsrs-image]: https://docs.rs/wallabag-backend/badge.svg
+[docsrs]: https://docs.rs/wallabag-backend
+[cratesio-image]: https://img.shields.io/crates/v/wallabag-backend.svg
+[cratesio]: https://crates.io/crates/wallabag-backend

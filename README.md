@@ -58,6 +58,9 @@ online docs once uploaded to crates.io)
 
 ## Developing
 
+Everything works on stable Rust, 2018 edition, so you will need the latest
+stable rust compiler to build the project.
+
 At the moment everything is managed by standard cargo commands - `build`,
 `test`, `run`, etc. It is in a workspace, so the binary/crate to build/run
 needs to be specified. For example:

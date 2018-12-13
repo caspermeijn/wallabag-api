@@ -1,6 +1,8 @@
 
 # Wallabag CLI
 
+[![wallabag-cli crates.io][cratesio-image]][cratesio]
+
 Command line client for [Wallabag][wallabag].
 
 ## About
@@ -82,3 +84,5 @@ be dual licensed as above, without any additional terms or conditions.
 
 
 [wallabag]: https://wallabag.org/
+[cratesio-image]: https://img.shields.io/crates/v/wallabag-cli.svg
+[cratesio]: https://crates.io/crates/wallabag-cli

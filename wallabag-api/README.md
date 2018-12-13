@@ -1,6 +1,9 @@
 
 # Wallabag client API
 
+[![wallabag-api crates.io][cratesio-image]][cratesio]
+[![wallabag-api docs.rs][docsrs-image]][docsrs]
+
 Provides types and functions for interacting with a [Wallabag][wallabag] server API.
 
 
@@ -113,3 +116,7 @@ be dual licensed as above, without any additional terms or conditions.
 
 
 [wallabag]: https://wallabag.org/
+[docsrs-image]: https://docs.rs/wallabag-api/badge.svg
+[docsrs]: https://docs.rs/wallabag-api
+[cratesio-image]: https://img.shields.io/crates/v/wallabag-api.svg
+[cratesio]: https://crates.io/crates/wallabag-api
