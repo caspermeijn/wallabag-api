@@ -28,30 +28,34 @@ Note: to run without installing, you can use `cargo run --bin <bin name>`. It
 will need `--` between this and any args meant for the target program. Eg.
 `cargo run --bin wallabag-cli -- entry list`.
 
+It requires a valid toml config file to run. There is an example file that you
+can use. Edit the example (or make a copy) and point the program at it like so:
+`wallabag-cli -c my_config.toml <args>`.
+
 First, sync everything for use. All (well, most) commands that operate on the
 data work solely on the local versions saved in the database.
 
 ```
-wallabag-cli sync
+wallabag-cli -c myconfig sync
 ```
 
 For some things, a full sync is required (eg. remotely deleted entries):
 
 ```
-wallabag-cli sync --full
+wallabag-cli -c myconfig sync --full
 ```
 
 List entries:
 
 ```
-wallabag-cli entry list
+wallabag-cli -c myconfig entry list
 ```
 
 Show an entry with ID (IDs are shown in `entry list`). This dumps the html
 output - pipe through something that can display the html for easy reading:
 
 ```
-cargo run --bin wallabag-cli -- entry show 1798248 | w3m -dump -T text/html
+wallabag-cli -c myconfig entry show 1798248 | w3m -dump -T text/html
 ```
 
 
