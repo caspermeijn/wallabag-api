@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
+readme = "README.md"
 
 # remove when ready to release
 publish = false

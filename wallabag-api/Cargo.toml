@@ -8,6 +8,7 @@ description = "Client API library for Wallabag"
 repository = "https://github.com/swalladge/wallabag-rs"
 keywords = ["api", "wallabag"]
 categories = ["api-bindings"]
+readme = "README.md"
 
 [badges]
 maintenance = { status = "actively-developed" }
