@@ -22,5 +22,4 @@ serde_derive = "1.0.82"
 simplelog = "0.5.3"
 toml = "0.4.10"
 
-wallabag-api = { path = "../wallabag-api" }
-wallabag-backend = { path = "../wallabag-backend" }
+wallabag-backend = { version = "0.1.0", path = "../wallabag-backend" }

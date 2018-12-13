@@ -16,4 +16,5 @@ simplelog = "0.5.3"
 termion = "1.5.1"
 tui = "0.3.0"
 
-wallabag-api = { path = "../wallabag-api" }
+wallabag-api = { version = "0.1.0", path = "../wallabag-api" }
+wallabag-backend = { version = "0.1.0", path = "../wallabag-backend" }

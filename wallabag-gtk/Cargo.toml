@@ -10,4 +10,4 @@ publish = false
 
 [dependencies]
 
-wallabag-api = { path = "../wallabag-api" }
+wallabag-api = { version = "0.1.0", path = "../wallabag-api" }
