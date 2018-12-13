@@ -140,7 +140,7 @@ fn main() -> Fallible<()> {
     // TODO: sensible default for config file
     let conf_file_name = opt
         .config
-        .unwrap_or_else(|| "examples/wallabag-cli.toml".to_owned());
+        .unwrap_or_else(|| "wallabag-cli/example-config.toml".to_owned());
     debug!("Attempting to load conf from {}", conf_file_name);
     let s = read_file(&conf_file_name)?;
     let config: Config = toml::from_str(&s)?;
