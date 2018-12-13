@@ -1,28 +1,22 @@
 
 # Wallabag client API
 
-Provides types and functions for interacting with a Wallabag server.
+Provides types and functions for interacting with a [Wallabag][wallabag] server API.
 
 
-## Info
+## About
 
-To view the docs, use cargo to generate and open them (from within the cloned
-repo).
+To view the docs, use cargo to generate and open them:
 
 ```
 cargo doc --open -p wallabag-api
 ```
 
-Info from @j0k3r:
 
-> url & origin_url are both the url of the content you saved. Usually they are the same but when you save a bit.ly link, it'll be in the origin_url and the resolved url of the shortlint will be in url
-> and the purpose of user info in entries is because we plan to share info between user in an instance. It's not yet available. No ETA too.
+## supported API endpoints:
 
-TODO: use this info in api docs
-
-
-## supported endpoints:
-
+All API endpoints are implemented except for the `/api/*/list{,s}`. I don't
+plan on implementing support for those unless there is a good reason to.
 
 - [X] DELETE `/api/annotations/{annotation}.{_format}`
       Removes an annotation.
@@ -101,3 +95,31 @@ The examples include:
   entries. See the source code for filtering options.
 - [save_url](examples/save_url.rs): save a url to the server, printing the
   created entry on success.
+
+## License
+
+```
+MIT License
+
+Copyright (c) 2018 Samuel Walladge
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+
+[wallabag]: https://wallabag.org/

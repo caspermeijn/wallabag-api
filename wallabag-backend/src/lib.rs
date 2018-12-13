@@ -85,6 +85,7 @@ fn get_string(x: &StringOrCmd) -> Fallible<String> {
     }
 }
 
+// TODO: add method to backend to get a reference to the client for lower level stuff if required
 impl Backend {
     pub fn new_with_conf(conf: Config) -> Fallible<Self> {
         let backend = Self {
