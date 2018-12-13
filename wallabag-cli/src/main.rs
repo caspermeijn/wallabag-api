@@ -1,14 +1,14 @@
+use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
-use std::fmt;
 
-use clap::{App, Arg, SubCommand};
-use failure::{Fallible, bail};
+use failure::{bail, Fallible};
 use log::debug;
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serializer};
 use serde_derive::{Deserialize, Serialize};
 use simplelog::{Level, LevelFilter, WriteLogger};
+use structopt::StructOpt;
 
 use wallabag_backend::{Backend, Config as BackendConfig};
 
@@ -21,15 +21,6 @@ impl fmt::Display for MessageError {
     }
 }
 impl std::error::Error for MessageError {}
-
-const INIT: &'static str = "init";
-const SYNC: &'static str = "sync";
-const TAGS: &'static str = "tags";
-const ADD: &'static str = "add";
-const RESET: &'static str = "reset";
-const ENTRIES: &'static str = "entry";
-const LIST: &'static str = "list";
-const SHOW: &'static str = "show";
 
 #[derive(Deserialize, Serialize, Debug)]
 struct CliConfig {
@@ -60,6 +51,74 @@ where
     }
 }
 
+#[derive(Debug, StructOpt)]
+/// Command line client for Wallabag.
+struct Opt {
+    /// Uses a custom config file
+    #[structopt(long = "config", short = "c")]
+    config: Option<String>,
+
+    #[structopt(subcommand)]
+    cmd: SubCommand,
+}
+
+#[derive(Debug, StructOpt)]
+enum SubCommand {
+    /// Initializes the database
+    #[structopt(name = "init")]
+    Init,
+
+    /// Resets the database to a clean state
+    #[structopt(name = "reset")]
+    Reset,
+
+    /// Syncs database with the server
+    #[structopt(name = "sync")]
+    Sync {
+        /// Performs a full sync (slow)
+        #[structopt(long = "full")]
+        full: bool,
+    },
+
+    /// Adds a new url
+    #[structopt(name = "add")]
+    Add {
+        /// Uploads and saves immediately (requires network connection)
+        #[structopt(long = "upload", short = "u")]
+        upload: bool,
+
+        /// Url to save
+        #[structopt(name = "url")]
+        url: String,
+    },
+
+    /// Prints a list of tags in the db
+    #[structopt(name = "tags")]
+    Tags,
+
+    /// Works with entries
+    #[structopt(name = "entry")]
+    Entry {
+        #[structopt(subcommand)]
+        cmd: EntrySubCommand,
+    },
+}
+
+#[derive(Debug, StructOpt)]
+enum EntrySubCommand {
+    /// Lists all entries
+    #[structopt(name = "list")]
+    List,
+
+    /// Prints the entry's content
+    #[structopt(name = "show")]
+    Show {
+        /// Id of the entry to show
+        #[structopt(name = "id")]
+        id: i64,
+    },
+}
+
 /// Serializer for serializing a LevelFilter as a String
 fn serialize_level_filter<S>(x: &LevelFilter, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -75,57 +134,17 @@ struct Config {
 }
 
 fn main() -> Fallible<()> {
-    let app = App::new("Wallabag CLI")
-        .version("alpha")
-        .about("Command line client for Wallabag")
-        .arg(
-            Arg::with_name("config")
-                .short("c")
-                .long("config")
-                .value_name("FILE")
-                .help("Use a custom config file")
-                .takes_value(true),
-        )
-        .subcommand(SubCommand::with_name(INIT).about("init the database"))
-        .subcommand(SubCommand::with_name(RESET).about("reset the database (all data lost)"))
-        .subcommand(
-            SubCommand::with_name(SYNC)
-                .about("bidirectional sync database with server")
-                .arg(
-                    Arg::with_name("full")
-                        .long("full")
-                        .help("Perform a full sync (slow)."),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(ADD)
-                .about("Add a new url")
-                .arg(Arg::with_name("URL").help("The url to save").required(true))
-                .arg(
-                    Arg::with_name("upload")
-                        .short("u")
-                        .long("upload")
-                        .help("Upload immediately (requires network connection)"),
-                ),
-        )
-        .subcommand(SubCommand::with_name(TAGS).about("Display a list of tags"))
-        .subcommand(
-            SubCommand::with_name(ENTRIES)
-                .about("Work with entries")
-                .subcommand(SubCommand::with_name(LIST).about("List all entries"))
-                .subcommand(SubCommand::with_name(SHOW).about("Print the entry's content")
-                            .arg(Arg::with_name("entry_id").required(true).help("ID of the entry to show")
-                            )),
-        );
-
-    let matches = app.get_matches();
+    let opt = Opt::from_args();
 
     // Load config from file
-    // TODO: default and override in args for filename
-    let conf_file_name = "examples/wallabag-cli.toml";
+    // TODO: sensible default for config file
+    let conf_file_name = opt
+        .config
+        .unwrap_or_else(|| "examples/wallabag-cli.toml".to_owned());
     debug!("Attempting to load conf from {}", conf_file_name);
-    let s = read_file(conf_file_name)?;
+    let s = read_file(&conf_file_name)?;
     let config: Config = toml::from_str(&s)?;
+
     // TODO: allow command line args to override those in conf file
 
     // init logging
@@ -138,26 +157,25 @@ fn main() -> Fallible<()> {
             location: Some(Level::Error),
             time_format: Some("%F %T"),
         },
-        OpenOptions::new().create(true).append(true).open(config.cli.log_file)?,
+        OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(config.cli.log_file)?,
     )?;
 
     let mut backend = Backend::new_with_conf(config.backend)?;
 
-    match matches.subcommand_name() {
-        None => {
-            println!(":: No subcommand given.");
-        }
-        Some(INIT) => {
+    match opt.cmd {
+        SubCommand::Init => {
             println!(":: Initing the database.");
             backend.init()?;
         }
-        Some(RESET) => {
+        SubCommand::Reset => {
             println!(":: Resetting the database to a clean state.");
             backend.reset()?;
         }
-        Some(SYNC) => {
-            let sync_matches = matches.subcommand_matches(SYNC).unwrap();
-            if sync_matches.is_present("full") {
+        SubCommand::Sync { full } => {
+            if full {
                 println!(":: Running a full sync.");
                 backend.full_sync()?;
             } else {
@@ -165,16 +183,14 @@ fn main() -> Fallible<()> {
                 backend.sync()?;
             }
         }
-        Some(ADD) => {
-            let add_matches = matches.subcommand_matches(ADD).unwrap();
-            let url = add_matches.value_of("URL").unwrap();
-            if add_matches.is_present("upload") {
+        SubCommand::Add { upload, url } => {
+            if upload {
                 backend.add_url_online(url)?;
             } else {
                 backend.add_url(url)?;
             }
         }
-        Some(TAGS) => {
+        SubCommand::Tags => {
             let mut tags = backend.tags()?;
             tags.sort_unstable_by(|left, right| left.label.cmp(&right.label));
 
@@ -182,15 +198,9 @@ fn main() -> Fallible<()> {
                 println!("{}", tag.label);
             }
         }
-        Some(ENTRIES) => {
-            let entries_matches = matches.subcommand_matches(ENTRIES).unwrap();
-            match entries_matches
-                .subcommand_name()
-            {
-                None => {
-                    // ¯\_(ツ)_/¯
-                }
-                Some(LIST) => {
+        SubCommand::Entry{ cmd } => {
+            match cmd {
+                EntrySubCommand::List => {
                     let entries = backend.entries()?;
 
                     for entry in entries {
@@ -201,8 +211,7 @@ fn main() -> Fallible<()> {
                         );
                     }
                 }
-                Some(SHOW) => {
-                    let id: i64 = entries_matches.subcommand_matches(SHOW).unwrap().value_of("entry_id").unwrap().parse()?;
+                EntrySubCommand::Show { id } => {
                     let entry = match backend.get_entry(id)? {
                         Some(entry) => entry,
                         None => {
@@ -219,13 +228,7 @@ fn main() -> Fallible<()> {
                         }
                     }
                 }
-                Some(_) => {
-                    // ¯\_(ツ)_/¯
-                }
             }
-        }
-        Some(_) => {
-            unreachable!();
         }
     }
 

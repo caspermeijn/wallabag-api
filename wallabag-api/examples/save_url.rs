@@ -2,7 +2,7 @@ use std::env;
 use std::error::Error;
 use std::result::Result;
 
-use wallabag_api::types::{Config, Range};
+use wallabag_api::types::{Config, NewEntry, Range};
 use wallabag_api::Client;
 
 pub fn main() -> Result<(), ()> {
