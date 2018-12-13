@@ -7,6 +7,8 @@ license = "MIT OR Apache-2.0"
 description = "Shared backend for Wallabag client apps"
 repository = "https://github.com/swalladge/wallabag-rs"
 keywords = ["wallabag"]
+
+[badges]
 maintenance = { status = "experimental" }
 
 [dependencies]

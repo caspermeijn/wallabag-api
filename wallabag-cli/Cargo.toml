@@ -8,6 +8,8 @@ description = "Command line client for Wallabag"
 repository = "https://github.com/swalladge/wallabag-rs"
 keywords = ["cli", "wallabag"]
 categories = ["command-line-interface"]
+
+[badges]
 maintenance = { status = "experimental" }
 
 [dependencies]
