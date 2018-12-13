@@ -23,6 +23,28 @@ Goals:
 - [ ] create/edit/delete tags
 - [ ] search data
 
+## Installation
+
+The latest release is available on crates.io so can be installed directly with
+cargo:
+
+```
+cargo install wallabag-cli
+```
+
+> TODO: By the way, this name is too long to type... need to think of a better
+> and shorter name.
+
+It can also be built and run from source:
+
+```
+git clone https://github.com/swalladge/wallabag-rs.git
+cd wallabag-rs
+cargo build -p wallabag-cli --release
+# binary now built at:
+./target/release/wallabag-cli --version
+```
+
 
 ## Usage
 
