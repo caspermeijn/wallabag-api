@@ -20,7 +20,7 @@ use wallabag_api::types::{
 };
 use wallabag_api::Client;
 
-use self::db::{DbNewUrl, DB};
+use self::db::{NewUrl, DB};
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(untagged)]
@@ -71,15 +71,15 @@ fn get_string(x: &StringOrCmd) -> Fallible<String> {
             debug!("Running command {:?}", cmd);
             let mut args = cmd.iter();
 
-            let cmd = args.next().ok_or(BackendError::EmptyCommand)?;
+            let executable = args.next().ok_or(BackendError::EmptyCommand)?;
 
-            let output = Command::new(cmd).args(args).output()?;
-            if !output.status.success() {
-                debug!("Command failed with exit status {:?}", output.status.code());
-                Err(BackendError::FailedCommand)?
-            } else {
+            let output = Command::new(executable).args(args).output()?;
+            if output.status.success() {
                 let output = String::from_utf8(output.stdout)?;
                 Ok(output)
+            } else {
+                debug!("Command failed with exit status {:?}", output.status.code());
+                Err(BackendError::FailedCommand)?
             }
         }
     }
@@ -87,7 +87,7 @@ fn get_string(x: &StringOrCmd) -> Fallible<String> {
 
 impl Backend {
     pub fn new_with_conf(conf: Config) -> Fallible<Self> {
-        let backend = Backend {
+        let backend = Self {
             db: DB::new(conf.db_file),
             client: Client::new(APIConfig {
                 client_id: get_string(&conf.client_id)?,
@@ -137,7 +137,7 @@ impl Backend {
         let new_entry = NewEntry::new_with_url(url.into_string());
         let entry = self.client.create_entry(&new_entry)?;
 
-        self.pull_entry(entry)
+        self.pull_entry(&entry)
     }
 
     /// Add a new url. Does not attempt to upload immediately.
@@ -174,23 +174,22 @@ impl Backend {
         let tmp_empty_vec = vec![];
         let seen_annotations: HashSet<ID> = server_entries
             .iter()
-            .map(|e| {
+            .flat_map(|e| {
                 e.annotations
                     .as_ref()
                     .unwrap_or(&tmp_empty_vec)
                     .iter()
                     .map(|a| a.id)
             })
-            .flatten()
             .collect();
 
-        for remote_entry in server_entries.into_iter() {
+        for remote_entry in server_entries {
             // first check if existing entry with same id
             if let Some(saved_entry) = self.db.get_entry(remote_entry.id.as_int())? {
                 match Ord::cmp(&saved_entry.updated_at, &remote_entry.updated_at) {
                     Less => {
                         // saved entry is older than pulled version; overwrite
-                        self.pull_entry(remote_entry)?;
+                        self.pull_entry(&remote_entry)?;
                     }
                     Equal => {
                         // already synced and same version
@@ -207,11 +206,11 @@ impl Backend {
                             .client
                             .update_entry(saved_entry.id, &(&saved_entry).into())?;
                         // run pull entry on the entry returned to sync any new tags
-                        self.pull_entry(updated_entry)?;
+                        self.pull_entry(&updated_entry)?;
                     }
                 }
             } else {
-                self.pull_entry(remote_entry)?;
+                self.pull_entry(&remote_entry)?;
             }
         }
 
@@ -230,10 +229,10 @@ impl Backend {
         }
 
         // finally push new things to the server
-        for DbNewUrl { id, url } in self.db.get_new_urls()? {
+        for NewUrl { id, url } in self.db.get_new_urls()? {
             let new_entry = NewEntry::new_with_url(url);
             let entry = self.client.create_entry(&new_entry)?;
-            self.pull_entry(entry)?;
+            self.pull_entry(&entry)?;
             self.db.remove_new_url(id)?;
         }
 
@@ -276,7 +275,7 @@ impl Backend {
         // Sync entries recently updated server-side. Entries have tag links and annotations embedded.
         let mut filter = EntriesFilter::default();
         let since = self.db.get_last_sync()?;
-        filter.since = since.timestamp() as u64;
+        filter.since = since.timestamp();
         let entries = self.client.get_entries_with_filter(&filter)?;
 
         // used when syncing up locally updated entries/annotations to avoid syncing twice
@@ -284,24 +283,23 @@ impl Backend {
         let tmp_empty_vec = vec![];
         let seen_annotations: HashSet<ID> = entries
             .iter()
-            .map(|e| {
+            .flat_map(|e| {
                 e.annotations
                     .as_ref()
                     .unwrap_or(&tmp_empty_vec)
                     .iter()
                     .map(|a| a.id)
             })
-            .flatten()
             .collect();
 
         // sync recently updated entries
-        for remote_entry in entries.into_iter() {
+        for remote_entry in entries {
             // first check if existing entry with same id
             if let Some(saved_entry) = self.db.get_entry(remote_entry.id.as_int())? {
                 match Ord::cmp(&saved_entry.updated_at, &remote_entry.updated_at) {
                     Less => {
                         // saved entry is older than pulled version; overwrite
-                        self.pull_entry(remote_entry)?;
+                        self.pull_entry(&remote_entry)?;
                     }
                     Equal => {
                         // already synced and same version
@@ -319,33 +317,33 @@ impl Backend {
                             .update_entry(saved_entry.id, &(&saved_entry).into())?;
                         // run pull entry on the entry returned to sync any new tags and
                         // update annotations
-                        self.pull_entry(updated_entry)?;
+                        self.pull_entry(&updated_entry)?;
                     }
                 }
             } else {
-                self.pull_entry(remote_entry)?;
+                self.pull_entry(&remote_entry)?;
             }
         }
 
         // Update all locally-recently-updated entries and annotations that weren't touched
         // previously.
-        for entry in self.db.get_entries_since(since)?.into_iter() {
+        for entry in self.db.get_entries_since(since)? {
             if !seen_entries.contains(&entry.id) {
                 self.client.update_entry(entry.id, &(&entry).into())?;
             }
         }
 
-        for ann in self.db.get_annotations_since(since)?.into_iter() {
+        for ann in self.db.get_annotations_since(since)? {
             if !seen_annotations.contains(&ann.id) {
                 self.client.update_annotation(&ann)?;
             }
         }
 
         // finally push new things to the server
-        for DbNewUrl { id, url } in self.db.get_new_urls()? {
+        for NewUrl { id, url } in self.db.get_new_urls()? {
             let new_entry = NewEntry::new_with_url(url);
             let entry = self.client.create_entry(&new_entry)?;
-            self.pull_entry(entry)?;
+            self.pull_entry(&entry)?;
             self.db.remove_new_url(id)?;
         }
 
@@ -368,20 +366,20 @@ impl Backend {
     /// save an entry to the database where the entry has been determined to be
     /// newer than any in the database, but still need to do bidirectional sync
     /// for associated annotations and tags
-    fn pull_entry(&mut self, entry: Entry) -> Fallible<()> {
-        self.db.save_entry(&entry)?;
+    fn pull_entry(&mut self, entry: &Entry) -> Fallible<()> {
+        self.db.save_entry(entry)?;
 
         if let Some(ref anns) = entry.annotations {
             for ann in anns {
-                self.sync_annotation(ann, &entry)?;
+                self.sync_annotation(ann, entry)?;
             }
         }
 
         // rebuild tag links
-        self.db.drop_tag_links_for_entry(&entry)?;
-        for tag in entry.tags.iter() {
-            self.db.save_tag(tag)?;
-            self.db.save_tag_link(&entry, tag)?;
+        self.db.drop_tag_links_for_entry(entry)?;
+        for tag in &entry.tags {
+            self.db.save_tag(&tag)?;
+            self.db.save_tag_link(entry, &tag)?;
         }
 
         Ok(())

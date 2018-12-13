@@ -68,8 +68,7 @@ where
         StringInt::String(s) => match s.parse::<u32>() {
             Ok(i) => Ok(i),
             Err(_) => Err(DeError::custom(format!(
-                "Could not deserialize {}
-                as u32",
+                "Could not deserialize {} as u32",
                 s
             ))),
         },

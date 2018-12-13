@@ -15,7 +15,7 @@ use wallabag_api::types::{
     Annotation, Annotations, Entries, Entry, NewAnnotation, Range, Tag, Tags, ID,
 };
 
-pub struct DbNewUrl {
+pub struct NewUrl {
     pub id: i64,
     pub url: String,
 }
@@ -38,7 +38,7 @@ pub struct DB {
 
 impl DB {
     pub fn new<T: Into<PathBuf>>(db_file: T) -> Self {
-        DB {
+        Self {
             db_file: db_file.into(),
         }
     }
@@ -92,7 +92,9 @@ impl DB {
         conn.execute("PRAGMA foreign_keys = ON", NO_PARAMS)?;
 
         let query = include_str!("../sql/up.sql");
-        Ok(conn.execute_batch(query)?)
+        conn.execute_batch(query)?;
+
+        Ok(())
     }
 
     /// Get an annotation from the db by id.
@@ -138,7 +140,6 @@ impl DB {
 
         results.collect()
     }
-
 
     /// Get a set of IDs of all entries in the database.
     pub fn get_all_entry_ids(&self) -> Fallible<HashSet<ID>> {
@@ -238,19 +239,21 @@ impl DB {
     /// Remove an annotation from the database. Should only be called from a sync procedure
     /// otherwise this delete action will not be synced.
     pub fn delete_annotation<T: Into<ID>>(&self, id: T) -> Fallible<()> {
-        self.conn()?
-            .execute("DELETE FROM annotations WHERE id = ?", &[&id.into().as_int()])?;
+        self.conn()?.execute(
+            "DELETE FROM annotations WHERE id = ?",
+            &[&id.into().as_int()],
+        )?;
 
         Ok(())
     }
 
-    pub fn get_new_urls(&self) -> Fallible<Vec<DbNewUrl>> {
+    pub fn get_new_urls(&self) -> Fallible<Vec<NewUrl>> {
         let conn = self.conn()?;
 
         // query and display the tags
         let mut stmt = conn.prepare("SELECT id, url FROM new_urls")?;
-        let results = stmt.query_and_then(NO_PARAMS, |row| -> Fallible<DbNewUrl> {
-            Ok(DbNewUrl {
+        let results = stmt.query_and_then(NO_PARAMS, |row| -> Fallible<NewUrl> {
+            Ok(NewUrl {
                 id: row.get_checked(0)?,
                 url: row.get_checked(1)?,
             })
@@ -505,8 +508,10 @@ fn extract_result<T, U>(x: Option<Result<T, U>>) -> Result<Option<T>, U> {
     }
 }
 
-/// Parse an Entry from a rusqlite::Row. NOTE: this will only work with the correct row
-/// ordering. See the queries where this is used for a template.
+/// Parse an Entry from a `rusqlite::Row`.
+///
+/// NOTE: this will only work with the correct row ordering. See the queries where this is used for
+/// a template.
 fn row_to_entry<'r, 's, 't0>(row: &'r Row<'s, 't0>) -> Fallible<Entry> {
     Ok(Entry {
         id: ID(row.get_checked(0)?),
@@ -552,8 +557,10 @@ fn row_to_entry<'r, 's, 't0>(row: &'r Row<'s, 't0>) -> Fallible<Entry> {
     })
 }
 
-/// Parse an Annotation from a rusqlite::Row. NOTE: this will only work with the correct row
-/// ordering. See the queries where this is used for a template.
+/// Parse an Annotation from a `rusqlite::Row`.
+///
+/// NOTE: this will only work with the correct row ordering. See the queries where this is used for
+/// a template.
 fn row_to_ann<'r, 's, 't0>(row: &'r Row<'s, 't0>) -> Fallible<Annotation> {
     Ok(Annotation {
         id: ID(row.get_checked(0)?),
