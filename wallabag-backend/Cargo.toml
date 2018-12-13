@@ -1,8 +1,13 @@
 [package]
 name = "wallabag-backend"
+edition = "2018"
 version = "0.1.0"
 authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
-edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Shared backend for Wallabag client apps"
+repository = "https://github.com/swalladge/wallabag-rs"
+keywords = ["wallabag"]
+maintenance = { status = "experimental" }
 
 [dependencies]
 chrono = { version = "0.4.6", features = ["serde"] }

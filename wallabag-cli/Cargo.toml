@@ -1,8 +1,14 @@
 [package]
 name = "wallabag-cli"
+edition = "2018"
 version = "0.1.0"
 authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
-edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "Command line client for Wallabag"
+repository = "https://github.com/swalladge/wallabag-rs"
+keywords = ["cli", "wallabag"]
+categories = ["command-line-interface"]
+maintenance = { status = "experimental" }
 
 [dependencies]
 structopt = "0.2.14"

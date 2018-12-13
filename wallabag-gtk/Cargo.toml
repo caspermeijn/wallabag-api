@@ -3,6 +3,10 @@ name = "wallabag-gtk"
 version = "0.1.0"
 authors = ["Samuel Walladge <samuel@swalladge.id.au>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+
+# remove when ready to release
+publish = false
 
 [dependencies]
 
