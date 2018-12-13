@@ -198,38 +198,36 @@ fn main() -> Fallible<()> {
                 println!("{}", tag.label);
             }
         }
-        SubCommand::Entry{ cmd } => {
-            match cmd {
-                EntrySubCommand::List => {
-                    let entries = backend.entries()?;
+        SubCommand::Entry { cmd } => match cmd {
+            EntrySubCommand::List => {
+                let entries = backend.entries()?;
 
-                    for entry in entries {
-                        println!(
-                            "{} {}",
-                            entry.id.as_int(),
-                            entry.title.unwrap_or_else(|| "UNTITLED".to_owned())
-                        );
-                    }
+                for entry in entries {
+                    println!(
+                        "{} {}",
+                        entry.id.as_int(),
+                        entry.title.unwrap_or_else(|| "UNTITLED".to_owned())
+                    );
                 }
-                EntrySubCommand::Show { id } => {
-                    let entry = match backend.get_entry(id)? {
-                        Some(entry) => entry,
-                        None => {
-                            bail!("Entry not found");
-                        }
-                    };
+            }
+            EntrySubCommand::Show { id } => {
+                let entry = match backend.get_entry(id)? {
+                    Some(entry) => entry,
+                    None => {
+                        bail!("Entry not found");
+                    }
+                };
 
-                    match entry.content {
-                        Some(s) => {
-                            println!("{}", s);
-                        }
-                        None => {
-                            bail!("No content");
-                        }
+                match entry.content {
+                    Some(s) => {
+                        println!("{}", s);
+                    }
+                    None => {
+                        bail!("No content");
                     }
                 }
             }
-        }
+        },
     }
 
     Ok(())

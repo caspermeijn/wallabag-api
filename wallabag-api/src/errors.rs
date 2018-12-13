@@ -45,12 +45,14 @@ pub enum ClientError {
 impl fmt::Display for ClientError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::ClientError::*;
-        write!(f, "{}", match self {
-            SerdeJsonError(e) => {
-                format!("Error deserializing json: {}", e)
+        write!(
+            f,
+            "{}",
+            match self {
+                SerdeJsonError(e) => format!("Error deserializing json: {}", e),
+                e => format!("{:?}", e),
             }
-            e => format!("{:?}", e),
-        })
+        )
     }
 }
 
@@ -80,11 +82,13 @@ pub enum TagStringError {
 
 impl fmt::Display for TagStringError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match self {
-            TagStringError::ContainsComma => {
-                "Contains comma (invalid character)"
+        write!(
+            f,
+            "{}",
+            match self {
+                TagStringError::ContainsComma => "Contains comma (invalid character)",
             }
-        })
+        )
     }
 }
 

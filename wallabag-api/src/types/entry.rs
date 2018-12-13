@@ -19,7 +19,6 @@ pub type Entries = Vec<Entry>;
 /// what `headers`, `http_status`, `mimetype`, etc. are referring to.
 #[derive(Deserialize, Debug)]
 pub struct Entry {
-
     /// Annotation objects for this entry.
     pub annotations: Option<Annotations>,
 
