@@ -1,3 +1,4 @@
+use std::io;
 use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
@@ -90,6 +91,14 @@ enum SubCommand {
         /// Url to save
         #[structopt(name = "url")]
         url: String,
+    },
+
+    /// Exports all local data to json
+    #[structopt(name = "export")]
+    Export {
+        /// Pretty prints json
+        #[structopt(long = "pretty", short = "p")]
+        pretty: bool,
     },
 
     /// Prints a list of tags in the db
@@ -196,6 +205,18 @@ fn main() -> Fallible<()> {
 
             for tag in tags {
                 println!("{}", tag.label);
+            }
+        }
+        SubCommand::Export { pretty } => {
+            let val = backend.export()?;
+
+            let stdout = io::stdout();
+            let handle = stdout.lock();
+
+            if pretty {
+                serde_json::to_writer_pretty(handle, &val)?;
+            } else {
+                serde_json::to_writer(handle, &val)?;
             }
         }
         SubCommand::Entry { cmd } => match cmd {

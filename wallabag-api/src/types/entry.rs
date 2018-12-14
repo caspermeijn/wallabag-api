@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 
 use crate::utils::serde::parse_intbool;
 
@@ -17,7 +17,7 @@ pub type Entries = Vec<Entry>;
 /// Most fields are controlled by the server. When creating an entry, the server will send a
 /// request to the given url and use the response to populate many of the fields. This response is
 /// what `headers`, `http_status`, `mimetype`, etc. are referring to.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct Entry {
     /// Annotation objects for this entry.
     pub annotations: Option<Annotations>,

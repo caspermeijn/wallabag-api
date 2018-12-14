@@ -4,7 +4,7 @@
 mod db;
 
 use std::cmp::Ordering::{Equal, Greater, Less};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::path::PathBuf;
 use std::process::Command;
@@ -123,6 +123,39 @@ impl Backend {
     /// Get a Vec of tags from the db.
     pub fn tags(&self) -> Fallible<Tags> {
         self.db.get_tags()
+    }
+
+    /// Export all the data (all the entries for now - TODO: decide if other data should be
+    /// exported - if so, return `serde_json::Value`)
+    pub fn export(&self) -> Fallible<Entries> {
+        let mut entries = self.db.get_all_entries()?;
+        let mut entries_map: HashMap<ID, &mut Entry> = HashMap::with_capacity(entries.len());
+
+        for entry in entries.iter_mut() {
+            entries_map.insert(entry.id, entry);
+        }
+
+        let annotations = self.db.get_annotations()?;
+        for (entry_id, ann) in annotations {
+            match entries_map.get_mut(&entry_id) {
+                None => {
+                    // Should never happen unless db is broken
+                }
+                Some(ref mut entry) => {
+                    match entry.annotations {
+                        Some(ref mut anns) => {
+                            anns.push(ann);
+                        }
+                        None => {
+                            entry.annotations = Some(vec![ann]);
+                        }
+                    }
+                }
+            }
+
+        }
+
+        Ok(entries)
     }
 
     /// Get a Vec of entries from the db.
