@@ -87,6 +87,12 @@ contribute or teach me how, or if you know of resources for integration testing
 in Rust, please contact me!! :)
 
 
+## Contributing
+
+Any feedback or comments appreciated! Also feel free to open issues and/or
+contact me with any questions, feedback, bug reports, feature requests, etc.
+Since everything is still in early development, if you'd like to contribute
+code, please open an issue first so everyone can be on the same page.
 
 ## License
 
