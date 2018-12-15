@@ -1,6 +1,7 @@
 use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
+use std::str::FromStr;
 
 use failure::{bail, Fallible};
 use log::debug;
@@ -116,7 +117,29 @@ enum EntrySubCommand {
         /// Id of the entry to show
         #[structopt(name = "id")]
         id: i64,
+
+        /// Format to print the entry as. Valid options: "html", "text"
+        #[structopt(name = "format", default_value = "text", long = "format", short = "f")]
+        format: DisplayFormat,
     },
+}
+
+#[derive(Debug)]
+enum DisplayFormat {
+    Text,
+    Html,
+}
+
+impl FromStr for DisplayFormat {
+    type Err = failure::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_ref() {
+            "text" => DisplayFormat::Text,
+            "html" => DisplayFormat::Html,
+            _ => bail!("Valid formats are text or html"),
+        })
+    }
 }
 
 /// Serializer for serializing a LevelFilter as a String
@@ -210,7 +233,7 @@ fn main() -> Fallible<()> {
                     );
                 }
             }
-            EntrySubCommand::Show { id } => {
+            EntrySubCommand::Show { id, format } => {
                 let entry = match backend.get_entry(id)? {
                     Some(entry) => entry,
                     None => {
@@ -218,13 +241,19 @@ fn main() -> Fallible<()> {
                     }
                 };
 
-                match entry.content {
-                    Some(s) => {
-                        println!("{}", s);
+                if let Some(content) = entry.content {
+                    match format {
+                        DisplayFormat::Html => {
+                            // content should be stored as html by default
+                            println!("{}", content);
+                        }
+                        DisplayFormat::Text => {
+                            let content = html2text::from_read(content.as_bytes(), 80);
+                            println!("{}", content);
+                        }
                     }
-                    None => {
-                        bail!("No content");
-                    }
+                } else {
+                    bail!("No content");
                 }
             }
         },
