@@ -22,6 +22,7 @@ mod user;
 pub(crate) use self::annotations::AnnotationRows;
 pub use self::annotations::{Annotation, Annotations, NewAnnotation, Range};
 pub use self::common::ID;
+pub(crate) use self::entries_filter::RequestEntriesFilter;
 pub use self::entries_filter::{EntriesFilter, SortBy, SortOrder};
 pub(crate) use self::entry::{DeletedEntry, PaginatedEntries};
 pub use self::entry::{Entries, Entry};
@@ -44,10 +45,22 @@ pub(crate) struct TokenInfo {
 /// configuration to use to init a `Client`.
 #[derive(Debug, Clone)]
 pub struct Config {
+
+
+    /// An oauth client id.
     pub client_id: String,
+
+    /// An oauth client secret.
     pub client_secret: String,
+
+    /// Your username.
     pub username: String,
+
+    /// Your password. Unfortunately Wallabag doesn't support full oauth yet, and still requires
+    /// applications to access your password.
     pub password: String,
+
+    /// Should not include trailing slash. Eg. "https://framabag.org" is fine.
     pub base_url: String,
 }
 

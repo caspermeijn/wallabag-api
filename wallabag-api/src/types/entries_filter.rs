@@ -49,9 +49,6 @@ pub struct EntriesFilter {
 
     /// None = all entries; true/false = entries which do or do not have a public link
     pub public: Option<bool>,
-
-    /// no touchy. internal only
-    pub(crate) page: u32, // page number; for pagination
 }
 
 /// Used to serialize the tags list as a comma separated string.
@@ -75,7 +72,18 @@ impl Default for EntriesFilter {
             tags: vec![],
             since: 0,
             public: None,
-            page: 1,
         }
     }
+}
+
+/// Internal entries filter wrapper for adding additional data to a request.
+#[derive(Serialize, Debug)]
+pub(crate) struct RequestEntriesFilter<'a> {
+    /// page number; for pagination
+    pub page: u32,
+
+    /// Embedded actual entries filter. Flatten for serialization so we can seemlessly use it in
+    /// requests.
+    #[serde(flatten)]
+    pub filter: &'a EntriesFilter,
 }

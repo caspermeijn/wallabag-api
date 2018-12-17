@@ -9,11 +9,7 @@ Provides types and functions for interacting with a [Wallabag][wallabag] server 
 
 ## About
 
-To view the docs, use cargo to generate and open them:
-
-```
-cargo doc --open -p wallabag-api
-```
+See the [documentation][docsrs] for usage information.
 
 
 ## supported API endpoints:
