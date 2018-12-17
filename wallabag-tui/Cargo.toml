@@ -11,11 +11,15 @@ publish = false
 
 
 [dependencies]
+structopt = "0.2.14"
 failure = "0.1.3"
 log = "0.4.6"
+serde = "1.0.82"
+serde_derive = "1.0.82"
 simplelog = "0.5.3"
 termion = "1.5.1"
 tui = "0.3.0"
+toml = "0.4.10"
 
 wallabag-api = { version = "0.1.0", path = "../wallabag-api" }
 wallabag-backend = { version = "0.1.0", path = "../wallabag-backend" }
