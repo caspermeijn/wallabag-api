@@ -112,6 +112,22 @@ impl DB {
         extract_result(results.next())
     }
 
+    /// Get all annotations (as a list of tuples of (entry_id, annotation))
+    pub fn get_annotations(&self) -> Fallible<Vec<(ID, Annotation)>> {
+        let conn = self.conn()?;
+
+        // query and display the tags
+        let mut stmt = conn.prepare(
+            r#"select id, annotator_schema_version, created_at, ranges, text,
+            updated_at, quote, user, entry_id from annotations"#,
+        )?;
+
+        let results =
+            stmt.query_and_then(NO_PARAMS, |row| Ok((ID(row.get_checked(8)?), row_to_ann(row)?)))?;
+
+        results.collect()
+    }
+
     /// Get all annotations updated since a given date. Useful for syncing purposes.
     pub fn get_annotations_since(&self, since: DateTime<Utc>) -> Fallible<Annotations> {
         let conn = self.conn()?;

@@ -16,8 +16,8 @@ use crate::errors::{
 use crate::types::{
     Annotation, AnnotationRows, Annotations, Config, DeletedEntry, DeletedTag, Entries,
     EntriesFilter, Entry, ExistsInfo, ExistsResponse, Format, NewAnnotation, NewEntry,
-    NewlyRegisteredInfo, PaginatedEntries, PatchEntry, RegisterInfo, Tag, TagString, Tags,
-    TokenInfo, User, ID, UNIT,
+    NewlyRegisteredInfo, PaginatedEntries, PatchEntry, RegisterInfo, RequestEntriesFilter, Tag,
+    TagString, Tags, TokenInfo, User, ID, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -268,10 +268,11 @@ impl Client {
 
     /// Check if a list of urls already have entries. This is more efficient if
     /// you want to batch check urls since only a single request is required.
-    pub fn batch_check_exists<T: Into<String>>(
-        &mut self,
-        urls: Vec<T>,
-    ) -> ClientResult<ExistsInfo> {
+    /// Returns a hashmap where the urls given are the keys and the values are either:
+    ///
+    /// - `None`: no existing entry corresponding to the url
+    /// - `Some(ID)`: an entry exists and here's the ID
+    pub fn check_urls_exist<T: Into<String>>(&mut self, urls: Vec<T>) -> ClientResult<ExistsInfo> {
         let mut params = vec![];
         params.push(("return_id".to_owned(), "1".to_owned()));
 
@@ -285,8 +286,9 @@ impl Client {
         self.smart_json_q(Method::GET, EndPoint::Exists, &params, UNIT)
     }
 
-    /// check if a url already has an entry recorded.
-    pub fn check_exists<T: Into<String>>(&mut self, url: T) -> ClientResult<Option<ID>> {
+    /// Check if a url already has a corresponding entry. Returns `None` if not existing or the ID
+    /// of the entry if it does exist.
+    pub fn check_url_exists<T: Into<String>>(&mut self, url: T) -> ClientResult<Option<ID>> {
         let mut params = HashMap::new();
         params.insert("url".to_owned(), url.into());
         params.insert("return_id".to_owned(), "1".to_owned());
@@ -298,7 +300,7 @@ impl Client {
         Ok(exists_info.exists)
     }
 
-    /// Add a new entry
+    /// Create a new entry. See docs for `NewEntry` for more information.
     pub fn create_entry(&mut self, new_entry: &NewEntry) -> ClientResult<Entry> {
         self.smart_json_q(Method::POST, EndPoint::Entries, UNIT, new_entry)
     }
@@ -412,24 +414,21 @@ impl Client {
     fn _get_entries(&mut self, filter: &EntriesFilter) -> ClientResult<Entries> {
         let mut entries = Entries::new();
 
-        // TODO: should change the number per page?
+        // TODO: should change the number per page for pagination?
 
-        // we want to take control so that we can manage the hidden fields and
-        // handle pagination
-        let mut filter = filter.clone();
-        filter.page = 1; // just to make sure
+        let mut params = RequestEntriesFilter { page: 1, filter };
 
         // loop to handle pagination. No other api endpoints paginate so it's
         // fine here.
         loop {
-            debug!("retrieving PaginatedEntries page {}", filter.page);
+            debug!("retrieving PaginatedEntries page {}", params.page);
             let json: PaginatedEntries =
-                self.smart_json_q(Method::GET, EndPoint::Entries, &filter, UNIT)?;
+                self.smart_json_q(Method::GET, EndPoint::Entries, &params, UNIT)?;
 
             entries.extend(json.embedded.items.into_iter());
 
             if json.page < json.pages {
-                filter.page = json.page + 1;
+                params.page = json.page + 1;
             } else {
                 break;
             }

@@ -1,6 +1,6 @@
 use std::env;
 
-use wallabag_api::types::{Config, EntriesFilter, SortOrder};
+use wallabag_api::types::{Config, EntriesFilter, SortBy, SortOrder};
 use wallabag_api::Client;
 
 pub fn main() {
@@ -16,10 +16,31 @@ pub fn main() {
 
     let mut client = Client::new(config);
 
-    let mut filter = EntriesFilter::default();
-    // edit filter options here
-    filter.order = SortOrder::Asc;
+    let filter = EntriesFilter {
+        archive: None,
+        starred: Some(true),
+        sort: SortBy::Created,
+        order: SortOrder::Desc,
+        tags: vec![],
+        since: 0,
+        public: None,
+    };
 
-    let res = client.get_entries_with_filter(&filter);
-    println!("{:#?}", res);
+    let response = client.get_entries_with_filter(&filter);
+    match response {
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+        Ok(entries) => {
+            // do something with the entries!
+            for entry in entries {
+                println!(
+                    "{} | {} | Starred at {}",
+                    entry.id,
+                    entry.title.unwrap_or("Untitled".to_owned()),
+                    entry.starred_at.unwrap()
+                );
+            }
+        }
+    }
 }

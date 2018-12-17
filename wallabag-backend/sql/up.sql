@@ -1,7 +1,5 @@
 begin;
 
--- TODO: more indices where useful
-
 -- annotations (one-to-many) and tags (many-to-many) associated
 create table entries (
   id integer primary key not null,
@@ -31,6 +29,7 @@ create table entries (
   user_name text not null
 );
 
+create unique index index_entries_id on entries (id);
 
 create table taglinks (
   tag_id integer not null,
@@ -40,12 +39,16 @@ create table taglinks (
   primary key (tag_id, entry_id)
 );
 
+create unique index index_taglinks_id on taglinks (tag_id, entry_id);
+
 -- has entries associated (many-to-many)
 create table tags (
   id integer primary key not null,
   label text not null,
   slug text not null
 );
+
+create unique index index_tags_id on tags (id);
 
 create table annotations (
   id integer primary key not null,
@@ -60,7 +63,7 @@ create table annotations (
   foreign key (entry_id) references entries (id) on delete cascade
 );
 
-create index annotations_entry_id on annotations (entry_id);
+create unique index index_annotations_entry_id on annotations (entry_id);
 
 -- tables to hold temporary ids of locally deleted entries; should be deleted
 -- after sync

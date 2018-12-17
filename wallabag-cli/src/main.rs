@@ -1,3 +1,4 @@
+use std::io;
 use std::fmt;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
@@ -73,6 +74,10 @@ enum SubCommand {
     #[structopt(name = "reset")]
     Reset,
 
+    /// Prints example config
+    #[structopt(name = "example-conf")]
+    ExampleConf,
+
     /// Syncs database with the server
     #[structopt(name = "sync")]
     Sync {
@@ -91,6 +96,14 @@ enum SubCommand {
         /// Url to save
         #[structopt(name = "url")]
         url: String,
+    },
+
+    /// Exports all local data to json
+    #[structopt(name = "export")]
+    Export {
+        /// Pretty prints json
+        #[structopt(long = "pretty", short = "p")]
+        pretty: bool,
     },
 
     /// Prints a list of tags in the db
@@ -159,6 +172,13 @@ struct Config {
 fn main() -> Fallible<()> {
     let opt = Opt::from_args();
 
+    // intercept this now, before attempting to load config
+    if let SubCommand::ExampleConf = opt.cmd {
+        let conf = include_str!("../example-config.toml");
+        println!("{}", conf);
+        return Ok(());
+    }
+
     // Load config from file
     // TODO: sensible default for config file
     let conf_file_name = opt
@@ -197,6 +217,9 @@ fn main() -> Fallible<()> {
             println!(":: Resetting the database to a clean state.");
             backend.reset()?;
         }
+        SubCommand::ExampleConf => {
+            // can never reach here
+        }
         SubCommand::Sync { full } => {
             if full {
                 println!(":: Running a full sync.");
@@ -219,6 +242,18 @@ fn main() -> Fallible<()> {
 
             for tag in tags {
                 println!("{}", tag.label);
+            }
+        }
+        SubCommand::Export { pretty } => {
+            let val = backend.export()?;
+
+            let stdout = io::stdout();
+            let handle = stdout.lock();
+
+            if pretty {
+                serde_json::to_writer_pretty(handle, &val)?;
+            } else {
+                serde_json::to_writer(handle, &val)?;
             }
         }
         SubCommand::Entry { cmd } => match cmd {
