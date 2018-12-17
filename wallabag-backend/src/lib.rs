@@ -15,6 +15,8 @@ use serde_json;
 
 use log::debug;
 
+pub use wallabag_api::types;
+
 use wallabag_api::types::{
     Annotation, Config as APIConfig, Entries, EntriesFilter, Entry, NewEntry, Tags, ID,
 };
