@@ -53,8 +53,8 @@ GUI client, probably with GTK...
 ## Documentation
 
 Everything should have extensive documentation, making the most of Rust's
-excellent inline docs support. Run `cargo doc` to generate them. (TODO: link to
-online docs once uploaded to crates.io)
+excellent inline docs support. Run `cargo doc` to generate them, or view them
+on docs.rs (links in readme of respective crates or from crates.io).
 
 ## Developing
 

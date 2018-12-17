@@ -83,6 +83,12 @@ wallabag-cli -c myconfig entry show 1798248 | w3m -dump -T text/html
 ```
 
 
+Generate an example config file with:
+
+```
+wallabag-cli example-conf > ~/wallabag-cli.toml
+```
+
 
 ## Developing
 

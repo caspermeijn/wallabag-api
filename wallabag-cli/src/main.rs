@@ -73,6 +73,10 @@ enum SubCommand {
     #[structopt(name = "reset")]
     Reset,
 
+    /// Prints example config
+    #[structopt(name = "example-conf")]
+    ExampleConf,
+
     /// Syncs database with the server
     #[structopt(name = "sync")]
     Sync {
@@ -145,6 +149,13 @@ struct Config {
 fn main() -> Fallible<()> {
     let opt = Opt::from_args();
 
+    // intercept this now, before attempting to load config
+    if let SubCommand::ExampleConf = opt.cmd {
+        let conf = include_str!("../example-config.toml");
+        println!("{}", conf);
+        return Ok(());
+    }
+
     // Load config from file
     // TODO: sensible default for config file
     let conf_file_name = opt
@@ -182,6 +193,9 @@ fn main() -> Fallible<()> {
         SubCommand::Reset => {
             println!(":: Resetting the database to a clean state.");
             backend.reset()?;
+        }
+        SubCommand::ExampleConf => {
+            // can never reach here
         }
         SubCommand::Sync { full } => {
             if full {
