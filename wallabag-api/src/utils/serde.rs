@@ -3,7 +3,6 @@
 
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serializer};
-use serde_derive::Deserialize;
 
 /// Used to serialize the boolean values to pseudo-bool integers. The api appears to support actual
 /// bool, but probably should follow the api docs just in case.

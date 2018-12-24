@@ -9,8 +9,7 @@ use std::str::FromStr;
 use failure::{bail, Fallible};
 use log::{debug, error, info, warn};
 use serde::de::Error as DeError;
-use serde::{Deserialize, Deserializer, Serializer};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use simplelog::{Level, LevelFilter, WriteLogger};
 use structopt::StructOpt;
 

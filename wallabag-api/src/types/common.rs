@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops::Deref;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// The type used as an ID for all data structures. Declared for clarity.
 #[derive(Serialize, Deserialize, Hash, Debug, Clone, Copy, PartialEq, Eq)]

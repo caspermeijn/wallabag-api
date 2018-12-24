@@ -3,7 +3,7 @@
 //! passed to client methods (eg. creating new entries).
 use std::collections::HashMap;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 // TODO: decide how to implement PartialEq/Eq for types here. (eg on the whole
 // structs, or just by IDs?)

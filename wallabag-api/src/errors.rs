@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fmt;
 
 use reqwest::StatusCode;
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 pub type ClientResult<T> = std::result::Result<T, ClientError>;
 

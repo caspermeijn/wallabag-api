@@ -9,8 +9,7 @@ use std::path::PathBuf;
 use failure::{bail, format_err, Fallible};
 use log::debug;
 use serde::de::Error as DeError;
-use serde::{Deserialize, Deserializer, Serializer};
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use simplelog::{Level, LevelFilter, WriteLogger};
 use structopt::StructOpt;
 
