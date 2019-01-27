@@ -549,7 +549,7 @@ fn row_to_entry<'r, 's, 't0>(row: &'r Row<'s, 't0>) -> Fallible<Entry> {
         )?,
         published_by: extract_result(
             row.get_checked::<usize, Option<String>>(13)?
-                .map(|row| serde_json::from_str::<Vec<String>>(&row)),
+                .map(|row| serde_json::from_str::<Vec<Option<String>>>(&row)),
         )?,
         reading_time: row.get_checked(14)?,
         starred_at: extract_result(
