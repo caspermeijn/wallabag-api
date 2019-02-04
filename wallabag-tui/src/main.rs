@@ -219,6 +219,7 @@ fn run_tui(backend: Backend) -> Fallible<()> {
     let mut selected_entry = 0;
     let mut show_article = false;
     let mut scroll = 0;
+    let mut article_content = String::new();
 
     loop {
         let size = terminal.size()?;
@@ -258,8 +259,7 @@ fn run_tui(backend: Backend) -> Fallible<()> {
                     .highlight_style(style.bg(Color::LightGreen).modifier(Modifier::Bold))
                     .render(&mut f, chunks[0]);
             } else {
-                let content = app.entries[selected_entry].content.clone().unwrap();
-                let text = [Text::raw(html2text::from_read(content.as_bytes(), 80))];
+                let text = [Text::raw(article_content.clone())];
                 tui::widgets::Paragraph::new(text.iter())
                     .block(Block::default().title("Paragraph").borders(Borders::ALL))
                     .style(Style::default().fg(Color::White).bg(Color::Black))
@@ -304,6 +304,8 @@ fn run_tui(backend: Backend) -> Fallible<()> {
                 Key::Char('m') => {
                     if let Some(sel) = app.selected {
                         selected_entry = sel;
+                        let content = app.entries[selected_entry].content.clone().unwrap();
+                        article_content = html2text::from_read(content.as_bytes(), 80);
                         show_article = true;
                     }
                 }
