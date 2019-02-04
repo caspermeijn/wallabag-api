@@ -213,7 +213,7 @@ impl DB {
 
         // query and display the tags
         let mut stmt = conn.prepare(
-            r#"SELECT id, "", created_at, domain_name, http_status,
+            r#"SELECT id, content, created_at, domain_name, http_status,
             is_archived, is_public, is_starred, language, mimetype, origin_url,
             preview_picture, published_at, published_by, reading_time,
             starred_at, title, uid, updated_at, url, headers, user_email,

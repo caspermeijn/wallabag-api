@@ -216,6 +216,10 @@ fn run_tui(backend: Backend) -> Fallible<()> {
 
     app.entries = backend.entries()?;
 
+    let mut selected_entry = 0;
+    let mut show_article = false;
+    let mut scroll = 0;
+
     loop {
         let size = terminal.size()?;
         if size != app.size {
@@ -230,27 +234,39 @@ fn run_tui(backend: Backend) -> Fallible<()> {
                 .split(app.size);
 
             let style = Style::default().fg(Color::Black).bg(Color::White);
-            SelectableList::default()
-                .block(Block::default().borders(Borders::ALL).title("Entries"))
-                .items(
-                    &app.entries
-                        .iter()
-                        .map(|entry| {
-                            format!(
-                                "{} | {}",
-                                entry.id,
-                                match entry.title.as_ref() {
-                                    Some(t) => t,
-                                    None => "Untitled",
-                                }
-                            )
-                        })
-                        .collect::<Vec<String>>(),
-                )
-                .select(app.selected)
-                .style(style)
-                .highlight_style(style.bg(Color::LightGreen).modifier(Modifier::Bold))
-                .render(&mut f, chunks[0]);
+
+            if !show_article {
+                SelectableList::default()
+                    .block(Block::default().borders(Borders::ALL).title("Entries"))
+                    .items(
+                        &app.entries
+                            .iter()
+                            .map(|entry| {
+                                format!(
+                                    "{} | {}",
+                                    entry.id,
+                                    match entry.title.as_ref() {
+                                        Some(t) => t,
+                                        None => "Untitled",
+                                    }
+                                )
+                            })
+                            .collect::<Vec<String>>(),
+                    )
+                    .select(app.selected)
+                    .style(style)
+                    .highlight_style(style.bg(Color::LightGreen).modifier(Modifier::Bold))
+                    .render(&mut f, chunks[0]);
+            } else {
+                let content = app.entries[selected_entry].content.clone().unwrap();
+                let text = [Text::raw(html2text::from_read(content.as_bytes(), 80))];
+                tui::widgets::Paragraph::new(text.iter())
+                    .block(Block::default().title("Paragraph").borders(Borders::ALL))
+                    .style(Style::default().fg(Color::White).bg(Color::Black))
+                    .alignment(tui::layout::Alignment::Left)
+                    .scroll(scroll)
+                    .render(&mut f, chunks[0]);
+            }
         })?;
 
         match events.next()? {
@@ -262,6 +278,7 @@ fn run_tui(backend: Backend) -> Fallible<()> {
                     app.selected = None;
                 }
                 Key::Down => {
+                    scroll += 1;
                     app.selected = if let Some(selected) = app.selected {
                         if selected >= app.entries.len() - 1 {
                             Some(0)
@@ -273,6 +290,7 @@ fn run_tui(backend: Backend) -> Fallible<()> {
                     }
                 }
                 Key::Up => {
+                    scroll -= 1;
                     app.selected = if let Some(selected) = app.selected {
                         if selected > 0 {
                             Some(selected - 1)
@@ -281,6 +299,12 @@ fn run_tui(backend: Backend) -> Fallible<()> {
                         }
                     } else {
                         Some(0)
+                    }
+                }
+                Key::Char('m') => {
+                    if let Some(sel) = app.selected {
+                        selected_entry = sel;
+                        show_article = true;
                     }
                 }
                 _ => {}

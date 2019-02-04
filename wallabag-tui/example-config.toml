@@ -1,7 +1,7 @@
 
 [cli]
 
-log_file = "wallabag-cli.log"
+log_file = "wallabag-tui.log"
 
 # Valid levels are "off", "error", "warn", "info", "debug", and "trace".
 # Everything at and below the given level will be output in the log.
