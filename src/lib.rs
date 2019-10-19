@@ -5,7 +5,7 @@
 //!
 //!
 //! Example code to retrieve and print all starred entries.
-//! ```
+//! ```notrust
 //! use std::env;
 //!
 //! use wallabag_api::types::{Config, EntriesFilter, SortBy, SortOrder};

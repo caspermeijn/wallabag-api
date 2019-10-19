@@ -87,3 +87,22 @@ pub(crate) struct RequestEntriesFilter<'a> {
     #[serde(flatten)]
     pub filter: &'a EntriesFilter,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn entries_filter_init_test() {
+        let filter = EntriesFilter {
+            archive: None,
+            starred: Some(true),
+            sort: SortBy::Created,
+            order: SortOrder::Desc,
+            tags: vec![],
+            since: 0,
+            public: None,
+        };
+        assert_eq!(filter.since, 0);
+    }
+}

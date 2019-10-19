@@ -27,7 +27,7 @@ pub fn main() -> Result<(), ()> {
         ()
     })?;
 
-    let res = client.check_url_exists(url.as_ref());
+    let res = client.check_url_exists(url.clone());
 
     match res {
         Err(e) => {
