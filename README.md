@@ -1,98 +1,99 @@
-# wallabag-rs
 
-Client tools for [Wallabag][wallabag] in Rust.
+# Wallabag client API
+
+[![wallabag-api crates.io][cratesio-image]][cratesio]
+[![wallabag-api docs.rs][docsrs-image]][docsrs]
+
+Provides types and functions for interacting with a [Wallabag][wallabag] server API.
 
 
 ## About
 
-This repository is a cargo workspace. See READMEs in subdirectories for
-information about each package. The tools included are:
-
-### [wallabag-api](wallabag-api/)
-
-This is a client library to work directly with the Wallabag server
-[API][api-docs] from Rust in a type-safe manner.
-
-It is currently fully operational and manually tested with the Wallabag
-instance running at [Framabag][framabag]. The API might change at any time.
+See the [documentation][docsrs] for usage information.
 
 
-### [wallabag-backend](wallabag-backend/)
+## supported API endpoints:
 
-A backend library designed to be shared between client software (also to be
-developed here). It handles storing entries in a sqlite database, syncing with
-a Wallabag server, and aims to provide helpful abstractions over common
-actions so client software never has to directly touch the client API or
-database.
+All API endpoints are implemented except for the `/api/*/list{,s}`. I don't
+plan on implementing support for those unless there is a good reason to.
 
-### [wallabag-cli](wallabag-cli/)
+- [X] DELETE `/api/annotations/{annotation}.{_format}`
+      Removes an annotation.
+- [X] PUT `/api/annotations/{annotation}.{_format}`
+      Updates an annotation.
+- [X] GET `/api/annotations/{entry}.{_format}`
+      Retrieve annotations for an entry.
+- [X] POST `/api/annotations/{entry}.{_format}`
+      Creates a new annotation.
+- [X] GET `/api/entries.{_format}`
+      Retrieve all entries. It could be filtered by many options.
+- [X] POST `/api/entries.{_format}`
+      Create an entry.
+- [X] GET `/api/entries/exists.{_format}`
+      Check if an entry exist by url.
+- [ ] DELETE `/api/entries/list.{_format}`
+      Handles an entries list and delete URL.
+- [ ] POST `/api/entries/lists.{_format}`
+      Handles an entries list and create URL.
+- [ ] DELETE `/api/entries/tags/list.{_format}`
+      Handles an entries list delete tags from them.
+- [ ] POST `/api/entries/tags/lists.{_format}`
+      Handles an entries list and add tags to them.
+- [X] DELETE `/api/entries/{entry}.{_format}`
+      Delete permanently an entry.
+- [X] GET `/api/entries/{entry}.{_format}`
+      Retrieve a single entry.
+- [X] PATCH `/api/entries/{entry}.{_format}`
+      Change several properties of an entry.
+- [X] GET `/api/entries/{entry}/export.{_format}`
+      Retrieve a single entry as a predefined format.
+- [X] PATCH `/api/entries/{entry}/reload.{_format}`
+      Reload an entry.
+- [X] GET `/api/entries/{entry}/tags.{_format}`
+      Retrieve all tags for an entry.
+- [X] POST `/api/entries/{entry}/tags.{_format}`
+      Add one or more tags to an entry.
+- [X] DELETE `/api/entries/{entry}/tags/{tag}.{_format}`
+      Permanently remove one tag for an entry.
+- [X] DELETE `/api/tag/label.{_format}`
+      Permanently remove one tag from every entry by passing the Tag label.
+- [X] GET `/api/tags.{_format}`
+      Retrieve all tags.
+- [X] DELETE `/api/tags/label.{_format}`
+      Permanently remove some tags from every entry.
+- [X] DELETE `/api/tags/{tag}.{_format}`
+      Permanently remove one tag from every entry by passing the Tag ID.
+- [X] GET `/api/user.{_format}`
+      Retrieve current logged in user informations.
+- [X] PUT `/api/user.{_format}`
+      Register an user and create a client.
+- [X] GET `/api/version.{_format}`
+      Retrieve version number.
 
-(WIP)
 
-A command line client for Wallabag. Currently a work in progress, but already
-has some proof of concept actions developed (including saving a URL to
-Wallabag).
+## Examples
 
+A few small examples are provided. To use these, the following environment
+variables must be set (for authentication). For example:
 
-### [wallabag-tui](wallabag-tui/)
-
-(Unimplemented)
-
-It is planned to develop a command line interactive client with a TUI. Work
-will happen on this once the backend is more stable.
-
-
-### [wallabag-gtk](wallabag-gtk/)
-
-(Unimplemented)
-
-Ultimately I would like to develop a full suite of client software, including a
-GUI client, probably with GTK...
-
-
-## Documentation
-
-Everything should have extensive documentation, making the most of Rust's
-excellent inline docs support. Run `cargo doc` to generate them, or view them
-on docs.rs (links in readme of respective crates or from crates.io).
-
-## Developing
-
-Everything works on stable Rust, 2018 edition, so you will need the latest
-stable rust compiler to build the project.
-
-At the moment everything is managed by standard cargo commands - `build`,
-`test`, `run`, etc. It is in a workspace, so the binary/crate to build/run
-needs to be specified. For example:
-
+```sh
+export WALLABAG_CLIENT_ID="client_id"
+export WALLABAG_CLIENT_SECRET="client_secret"
+export WALLABAG_USERNAME="username"
+export WALLABAG_PASSWORD="password"
+export WALLABAG_URL="https://framabag.org"
 ```
-cargo run --bin wallabag-cli -- sync
-```
 
-### Examples
+The examples include:
 
-There are some examples (in a crate's `examples/` directory) that can be run
-like so:
-
-```
-cargo run --example save_url -- [args]
-```
-
-
-### Tests
-
-Currently only a few unit tests have been developed... I'm really not sure how
-to automate testing the backend and api. If you know how and willing to
-contribute or teach me how, or if you know of resources for integration testing
-in Rust, please contact me!! :)
-
-
-## Contributing
-
-Any feedback or comments appreciated! Also feel free to open issues and/or
-contact me with any questions, feedback, bug reports, feature requests, etc.
-Since everything is still in early development, if you'd like to contribute
-code, please open an issue first so everyone can be on the same page.
+- [check_exists](examples/check_exists.rs): check if there is an entry
+  corresponding to the url provided.
+- [example_sandbox](examples/example_sandbox.rs): a bunch of (mostly) commented
+  out small examples, used for manual testing... have fun experimenting!
+- [get_entries](examples/get_entries.rs): simply retrieve and debug print all
+  entries. See the source code for filtering options.
+- [save_url](examples/save_url.rs): save a url to the server, printing the
+  created entry on success.
 
 ## License
 
@@ -111,5 +112,7 @@ be dual licensed as above, without any additional terms or conditions.
 
 
 [wallabag]: https://wallabag.org/
-[api-docs]: https://doc.wallabag.org/en/developer/api/readme.html
-[framabag]: https://framabag.org/
+[docsrs-image]: https://docs.rs/wallabag-api/badge.svg
+[docsrs]: https://docs.rs/wallabag-api
+[cratesio-image]: https://img.shields.io/crates/v/wallabag-api.svg
+[cratesio]: https://crates.io/crates/wallabag-api

@@ -1,9 +1,21 @@
-[workspace]
+[package]
+name = "wallabag-api"
+edition = "2018"
+version = "0.1.2"
+authors = ["Samuel Walladge <samuel@swalladge.net>"]
+license = "MIT OR Apache-2.0"
+description = "Client API library for Wallabag"
+repository = "https://github.com/swalladge/wallabag-rs"
+keywords = ["api", "wallabag"]
+categories = ["api-bindings"]
+readme = "README.md"
 
-members = [
-  "wallabag-api",
-  "wallabag-backend",
-  "wallabag-cli",
-  "wallabag-tui",
-  "wallabag-gtk",
-]
+[badges]
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+chrono = { version = "0.4.6", features = ["serde"] }
+log = "0.4.6"
+reqwest = "0.9.5"
+serde = { version = "1.0.82", features = ["derive"] }
+serde_json = "1.0.33"
