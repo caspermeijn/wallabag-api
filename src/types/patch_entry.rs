@@ -34,6 +34,30 @@ pub struct PatchEntry {
     pub origin_url: Option<String>,
 }
 
+/// Use this as a convenience. This allows doing something like the following instead of needing to
+/// explicitly setting each ignored value to `None`:
+/// ```
+/// # use wallabag_api::types::PatchEntry;
+/// let archive_it = PatchEntry { archive: Some(true), .. Default::default() };
+/// ```
+impl Default for PatchEntry {
+    fn default() -> Self {
+        Self {
+            title: None,
+            tags: None,
+            archive: None,
+            starred: None,
+            public: None,
+            content: None,
+            language: None,
+            preview_picture: None,
+            published_at: None,
+            authors: None,
+            origin_url: None,
+        }
+    }
+}
+
 /// Convert an Entry to a set of changes ready for sending to the api.
 impl From<&Entry> for PatchEntry {
     fn from(entry: &Entry) -> Self {

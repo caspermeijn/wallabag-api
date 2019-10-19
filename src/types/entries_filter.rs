@@ -1,5 +1,5 @@
-use serde::Serializer;
 use serde::Serialize;
+use serde::Serializer;
 use std::result::Result;
 
 /// Used in `EntriesFilter` for ordering results.

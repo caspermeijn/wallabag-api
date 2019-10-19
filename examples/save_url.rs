@@ -1,8 +1,7 @@
 use std::env;
-use std::error::Error;
 use std::result::Result;
 
-use wallabag_api::types::{Config, NewEntry, Range};
+use wallabag_api::types::{Config, NewEntry};
 use wallabag_api::Client;
 
 pub fn main() -> Result<(), ()> {
@@ -23,7 +22,7 @@ pub fn main() -> Result<(), ()> {
         ()
     })?;
 
-    let mut entry = NewEntry::new_with_url(url);
+    let entry = NewEntry::new_with_url(url);
     // entry.tags = Some(vec!["wat,thing".to_owned(), "console".to_owned()]);
     // entry.archive = Some(true);
 

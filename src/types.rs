@@ -45,8 +45,6 @@ pub(crate) struct TokenInfo {
 /// configuration to use to init a `Client`.
 #[derive(Debug, Clone)]
 pub struct Config {
-
-
     /// An oauth client id.
     pub client_id: String,
 

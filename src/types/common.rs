@@ -48,12 +48,13 @@ impl Deref for ID {
 mod tests {
     use super::*;
 
-    fn foo(arg: &i64) {}
+    fn foo(_arg: &i64) {}
 
     #[test]
     fn test_flexible_id() {
         assert_eq!(*ID(234), 234);
         assert_eq!(ID(234), 234.into());
+        // test that can be passed to a function as a reference to an i64
         foo(&ID(234));
     }
 }
