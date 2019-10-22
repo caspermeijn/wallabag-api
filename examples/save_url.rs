@@ -4,7 +4,8 @@ use std::result::Result;
 use wallabag_api::types::{Config, NewEntry};
 use wallabag_api::Client;
 
-pub fn main() -> Result<(), ()> {
+#[tokio::main]
+async fn main() -> Result<(), ()> {
     let config = Config {
         client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
         client_secret: env::var("WALLABAG_CLIENT_SECRET").expect("WALLABAG_CLIENT_SECRET not set"),
@@ -26,7 +27,7 @@ pub fn main() -> Result<(), ()> {
     // entry.tags = Some(vec!["wat,thing".to_owned(), "console".to_owned()]);
     // entry.archive = Some(true);
 
-    let res = client.create_entry(&entry);
+    let res = client.create_entry(&entry).await;
 
     match res {
         Err(e) => {

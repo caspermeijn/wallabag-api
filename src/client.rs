@@ -50,17 +50,17 @@ impl Client {
 
     /// Internal method to get a valid access token. If no access token loaded
     /// yet, then get a new one.
-    fn get_token(&mut self) -> ClientResult<String> {
+    async fn get_token(&mut self) -> ClientResult<String> {
         if let Some(ref t) = self.token_info {
             Ok(t.access_token.clone())
         } else {
             debug!("No api token loaded yet");
-            self.load_token()
+            self.load_token().await
         }
     }
 
     /// Use credentials in the config to obtain an access token.
-    fn load_token(&mut self) -> ClientResult<String> {
+    async fn load_token(&mut self) -> ClientResult<String> {
         debug!("Requesting auth token");
         let mut fields = HashMap::new();
         fields.insert("grant_type".to_owned(), "password".to_owned());
@@ -70,16 +70,16 @@ impl Client {
         fields.insert("password".to_owned(), self.password.clone());
 
         let token_info: TokenInfo =
-            self.json_q(Method::POST, EndPoint::Token, UNIT, &fields, false)?;
+            self.json_q(Method::POST, EndPoint::Token, UNIT, &fields, false).await?;
         self.token_info = Some(token_info);
 
         Ok(self.token_info.as_ref().unwrap().access_token.clone())
     }
 
     /// Use saved token if present to get a fresh access token.
-    fn refresh_token(&mut self) -> ClientResult<String> {
+    async fn refresh_token(&mut self) -> ClientResult<String> {
         if self.token_info.is_none() {
-            return self.load_token();
+            return self.load_token().await;
         }
 
         let mut fields = HashMap::new();
@@ -92,7 +92,7 @@ impl Client {
         );
 
         let token_info: TokenInfo =
-            self.json_q(Method::POST, EndPoint::Token, UNIT, &fields, false)?;
+            self.json_q(Method::POST, EndPoint::Token, UNIT, &fields, false).await?;
         self.token_info = Some(token_info);
 
         Ok(self.token_info.as_ref().unwrap().access_token.clone())
@@ -100,7 +100,7 @@ impl Client {
 
     /// Smartly run a request that expects to receive json back. Handles adding
     /// authorization headers, and retry on expired token.
-    fn smart_text_q<J, Q>(
+    async fn smart_text_q<J, Q>(
         &mut self,
         method: Method,
         end_point: EndPoint,
@@ -111,12 +111,12 @@ impl Client {
         J: Serialize + ?Sized,
         Q: Serialize + ?Sized,
     {
-        Ok(self.smart_q(method, end_point, query, json)?.text()?)
+        Ok(self.smart_q(method, end_point, query, json).await?.text().await?)
     }
 
     /// Smartly run a request that expects to receive json back. Handles adding
     /// authorization headers, and retry on expired token.
-    fn smart_json_q<T, J, Q>(
+    async fn smart_json_q<T, J, Q>(
         &mut self,
         method: Method,
         end_point: EndPoint,
@@ -129,25 +129,25 @@ impl Client {
         Q: Serialize + ?Sized,
     {
         if max_level() >= LevelFilter::Debug {
-            let text = self.smart_q(method, end_point, query, json)?.text()?;
+            let text = self.smart_q(method, end_point, query, json).await?.text().await?;
             match serde_json::from_str(&text) {
                 Ok(j) => {
-                    debug!("Deserialized json response body: {}", text);
+                    debug!("Deserialized json response body: {}", &text);
                     Ok(j)
                 }
                 Err(e) => {
-                    debug!("Deserialize json failed for: {}", text);
+                    debug!("Deserialize json failed for: {}", &text);
                     Err(ClientError::SerdeJsonError(e))
                 }
             }
         } else {
-            Ok(self.smart_q(method, end_point, query, json)?.json()?)
+            Ok(self.smart_q(method, end_point, query, json).await?.json().await?)
         }
     }
 
     /// Smartly run a request that expects to receive json back. Handles adding
     /// authorization headers, and retry on expired token.
-    fn smart_q<J, Q>(
+    async fn smart_q<J, Q>(
         &mut self,
         method: Method,
         end_point: EndPoint,
@@ -158,14 +158,17 @@ impl Client {
         J: Serialize + ?Sized,
         Q: Serialize + ?Sized,
     {
-        let response_result = self.q(method.clone(), end_point, query, json, true);
+        // ensure the token is populated. bit of a hack to avoid calling get_token from inside
+        // self.q (causes async recursion otherwise). Will fix sometime.
+        let _ = self.get_token().await?;
+        let response_result = self.q(method.clone(), end_point, query, json, true).await;
 
         if let Err(ClientError::ExpiredToken) = response_result {
             debug!("Token expired; refreshing");
-            self.refresh_token()?;
+            self.refresh_token().await?;
 
             // try the request again now
-            Ok(self.q(method, end_point, query, json, true)?)
+            Ok(self.q(method, end_point, query, json, true).await?)
         } else {
             Ok(response_result?)
         }
@@ -173,7 +176,7 @@ impl Client {
 
     /// Just build and send a single request. Returns a json deserializable
     /// response.
-    fn json_q<T, J, Q>(
+    async fn json_q<T, J, Q>(
         &mut self,
         method: Method,
         end_point: EndPoint,
@@ -187,24 +190,24 @@ impl Client {
         Q: Serialize + ?Sized,
     {
         if max_level() >= LevelFilter::Debug {
-            let text = self.q(method, end_point, query, json, use_token)?.text()?;
+            let text = self.q(method, end_point, query, json, use_token).await?.text().await?;
             match serde_json::from_str(&text) {
                 Ok(j) => {
-                    debug!("Deserialized json response body: {}", text);
+                    debug!("Deserialized json response body: {}", &text);
                     Ok(j)
                 }
                 Err(e) => {
-                    debug!("Deserialize json failed for: {}", text);
+                    debug!("Deserialize json failed for: {}", &text);
                     Err(ClientError::SerdeJsonError(e))
                 }
             }
         } else {
-            Ok(self.q(method, end_point, query, json, use_token)?.json()?)
+            Ok(self.q(method, end_point, query, json, use_token).await?.json().await?)
         }
     }
 
     /// Build and send a single request. Does most of the heavy lifting.
-    fn q<J, Q>(
+    async fn q<J, Q>(
         &mut self,
         method: Method,
         end_point: EndPoint,
@@ -222,18 +225,20 @@ impl Client {
         let mut request = self.client.request(method, &url).query(query).json(json);
 
         if use_token {
-            request = request.header(
-                reqwest::header::AUTHORIZATION,
-                format!("Bearer {}", self.get_token()?),
-            );
+            if let Some(ref t) = self.token_info {
+                request = request.header(
+                    reqwest::header::AUTHORIZATION,
+                    format!("Bearer {}", t.access_token.clone()),
+                );
+            }
         }
 
-        let mut response = request.send()?;
+        let response = request.send().await?;
 
         trace!("response status: {:?}", response.status());
         match response.status() {
             StatusCode::UNAUTHORIZED => {
-                let info: ResponseError = response.json()?;
+                let info: ResponseError = response.json().await?;
                 if info.error_description.as_str().contains("expired") {
                     Err(ClientError::ExpiredToken)
                 } else {
@@ -241,12 +246,11 @@ impl Client {
                 }
             }
             StatusCode::FORBIDDEN => {
-                let info: ResponseCodeMessageError = response.json()?;
+                let info: ResponseCodeMessageError = response.json().await?;
                 Err(ClientError::Forbidden(info))
             }
             StatusCode::NOT_FOUND => {
-                println!("NOT FOUND {:?}", response.text());
-                let info: ResponseCodeMessageError = match response.json() {
+                let info: ResponseCodeMessageError = match response.json().await {
                     Ok(info) => info,
                     Err(_) => ResponseCodeMessageError {
                         error: CodeMessage {
@@ -262,7 +266,7 @@ impl Client {
                 Err(ClientError::NotModified)
             }
             status if status.is_success() => Ok(response),
-            status => Err(ClientError::Other(status, response.text()?)),
+            status => Err(ClientError::Other(status, response.text().await?)),
         }
     }
 
@@ -272,7 +276,7 @@ impl Client {
     ///
     /// - `None`: no existing entry corresponding to the url
     /// - `Some(ID)`: an entry exists and here's the ID
-    pub fn check_urls_exist<T: Into<String>>(&mut self, urls: Vec<T>) -> ClientResult<ExistsInfo> {
+    pub async fn check_urls_exist<T: Into<String>>(&mut self, urls: Vec<T>) -> ClientResult<ExistsInfo> {
         let mut params = vec![];
         params.push(("return_id".to_owned(), "1".to_owned()));
 
@@ -283,31 +287,31 @@ impl Client {
             params.push(("urls[]".to_owned(), url.into()));
         }
 
-        self.smart_json_q(Method::GET, EndPoint::Exists, &params, UNIT)
+        self.smart_json_q(Method::GET, EndPoint::Exists, &params, UNIT).await
     }
 
     /// Check if a url already has a corresponding entry. Returns `None` if not existing or the ID
     /// of the entry if it does exist.
-    pub fn check_url_exists<T: Into<String>>(&mut self, url: T) -> ClientResult<Option<ID>> {
+    pub async fn check_url_exists<T: Into<String>>(&mut self, url: T) -> ClientResult<Option<ID>> {
         let mut params = HashMap::new();
         params.insert("url".to_owned(), url.into());
         params.insert("return_id".to_owned(), "1".to_owned());
 
         let exists_info: ExistsResponse =
-            self.smart_json_q(Method::GET, EndPoint::Exists, &params, UNIT)?;
+            self.smart_json_q(Method::GET, EndPoint::Exists, &params, UNIT).await?;
 
         // extract and return the entry id
         Ok(exists_info.exists)
     }
 
     /// Create a new entry. See docs for `NewEntry` for more information.
-    pub fn create_entry(&mut self, new_entry: &NewEntry) -> ClientResult<Entry> {
-        self.smart_json_q(Method::POST, EndPoint::Entries, UNIT, new_entry)
+    pub async fn create_entry(&mut self, new_entry: &NewEntry) -> ClientResult<Entry> {
+        self.smart_json_q(Method::POST, EndPoint::Entries, UNIT, new_entry).await
     }
 
     /// Update entry. To leave an editable field unchanged, set to `None`.
-    pub fn update_entry<T: Into<ID>>(&mut self, id: T, entry: &PatchEntry) -> ClientResult<Entry> {
-        self.smart_json_q(Method::PATCH, EndPoint::Entry(id.into()), UNIT, entry)
+    pub async fn update_entry<T: Into<ID>>(&mut self, id: T, entry: &PatchEntry) -> ClientResult<Entry> {
+        self.smart_json_q(Method::PATCH, EndPoint::Entry(id.into()), UNIT, entry).await
     }
 
     /// Reload entry. This tells the server to re-fetch content from the url (or
@@ -315,20 +319,20 @@ impl Client {
     ///
     /// This returns `Err(ClientError::NotModified)` if the server either could
     /// not refresh the contents, or the content does not get modified.
-    pub fn reload_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
-        self.smart_json_q(Method::PATCH, EndPoint::EntryReload(id.into()), UNIT, UNIT)
+    pub async fn reload_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
+        self.smart_json_q(Method::PATCH, EndPoint::EntryReload(id.into()), UNIT, UNIT).await
     }
 
     /// Get an entry by id.
-    pub fn get_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
-        self.smart_json_q(Method::GET, EndPoint::Entry(id.into()), UNIT, UNIT)
+    pub async fn get_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
+        self.smart_json_q(Method::GET, EndPoint::Entry(id.into()), UNIT, UNIT).await
     }
 
     /// Delete an entry by id.
-    pub fn delete_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
+    pub async fn delete_entry<T: Into<ID>>(&mut self, id: T) -> ClientResult<Entry> {
         let id = id.into();
         let json: DeletedEntry =
-            self.smart_json_q(Method::DELETE, EndPoint::Entry(id), UNIT, UNIT)?;
+            self.smart_json_q(Method::DELETE, EndPoint::Entry(id), UNIT, UNIT).await?;
 
         // build an entry composed of the deleted entry returned and the id,
         // because the entry returned does not include the id.
@@ -365,17 +369,17 @@ impl Client {
     }
 
     /// Update an annotation.
-    pub fn update_annotation(&mut self, annotation: &Annotation) -> ClientResult<Annotation> {
+    pub async fn update_annotation(&mut self, annotation: &Annotation) -> ClientResult<Annotation> {
         self.smart_json_q(
             Method::PUT,
             EndPoint::Annotation(annotation.id),
             UNIT,
             annotation,
-        )
+        ).await
     }
 
     /// Create a new annotation on an entry.
-    pub fn create_annotation<T: Into<ID>>(
+    pub async fn create_annotation<T: Into<ID>>(
         &mut self,
         entry_id: T,
         annotation: &NewAnnotation,
@@ -385,33 +389,33 @@ impl Client {
             EndPoint::Annotation(entry_id.into()),
             UNIT,
             annotation,
-        )
+        ).await
     }
 
     /// Delete an annotation by id
-    pub fn delete_annotation<T: Into<ID>>(&mut self, id: T) -> ClientResult<Annotation> {
-        self.smart_json_q(Method::DELETE, EndPoint::Annotation(id.into()), UNIT, UNIT)
+    pub async fn delete_annotation<T: Into<ID>>(&mut self, id: T) -> ClientResult<Annotation> {
+        self.smart_json_q(Method::DELETE, EndPoint::Annotation(id.into()), UNIT, UNIT).await
     }
 
     /// Get all annotations for an entry (by id).
-    pub fn get_annotations<T: Into<ID>>(&mut self, id: T) -> ClientResult<Annotations> {
+    pub async fn get_annotations<T: Into<ID>>(&mut self, id: T) -> ClientResult<Annotations> {
         let json: AnnotationRows =
-            self.smart_json_q(Method::GET, EndPoint::Annotation(id.into()), UNIT, UNIT)?;
+            self.smart_json_q(Method::GET, EndPoint::Annotation(id.into()), UNIT, UNIT).await?;
         Ok(json.rows)
     }
 
     /// Get all entries.
-    pub fn get_entries(&mut self) -> ClientResult<Entries> {
-        self._get_entries(&EntriesFilter::default())
+    pub async fn get_entries(&mut self) -> ClientResult<Entries> {
+        self._get_entries(&EntriesFilter::default()).await
     }
 
     /// Get all entries, filtered by filter parameters.
-    pub fn get_entries_with_filter(&mut self, filter: &EntriesFilter) -> ClientResult<Entries> {
-        self._get_entries(filter)
+    pub async fn get_entries_with_filter(&mut self, filter: &EntriesFilter) -> ClientResult<Entries> {
+        self._get_entries(filter).await
     }
 
     /// Does the actual work of retrieving the entries. Handles pagination.
-    fn _get_entries(&mut self, filter: &EntriesFilter) -> ClientResult<Entries> {
+    async fn _get_entries(&mut self, filter: &EntriesFilter) -> ClientResult<Entries> {
         let mut entries = Entries::new();
 
         // TODO: should change the number per page for pagination?
@@ -423,7 +427,7 @@ impl Client {
         loop {
             debug!("retrieving PaginatedEntries page {}", params.page);
             let json: PaginatedEntries =
-                self.smart_json_q(Method::GET, EndPoint::Entries, &params, UNIT)?;
+                self.smart_json_q(Method::GET, EndPoint::Entries, &params, UNIT).await?;
 
             entries.extend(json.embedded.items.into_iter());
 
@@ -438,28 +442,28 @@ impl Client {
     }
 
     /// Get an export of an entry in a particular format.
-    pub fn export_entry<T: Into<ID>>(&mut self, entry_id: T, fmt: Format) -> ClientResult<String> {
+    pub async fn export_entry<T: Into<ID>>(&mut self, entry_id: T, fmt: Format) -> ClientResult<String> {
         self.smart_text_q(
             Method::GET,
             EndPoint::Export(entry_id.into(), fmt),
             UNIT,
             UNIT,
-        )
+        ).await
     }
 
     /// Get a list of all tags for an entry by entry id.
-    pub fn get_tags_for_entry<T: Into<ID>>(&mut self, entry_id: T) -> ClientResult<Tags> {
+    pub async fn get_tags_for_entry<T: Into<ID>>(&mut self, entry_id: T) -> ClientResult<Tags> {
         self.smart_json_q(
             Method::GET,
             EndPoint::EntryTags(entry_id.into()),
             UNIT,
             UNIT,
-        )
+        ).await
     }
 
     /// Add tags to an entry by entry id. Idempotent operation. No problems if
     /// tags list is empty.
-    pub fn add_tags_to_entry<T: Into<ID>, U: Into<String>>(
+    pub async fn add_tags_to_entry<T: Into<ID>, U: Into<String>>(
         &mut self,
         entry_id: T,
         tags: Vec<U>,
@@ -475,13 +479,13 @@ impl Client {
             EndPoint::EntryTags(entry_id.into()),
             UNIT,
             &data,
-        )
+        ).await
     }
 
     /// Delete a tag (by id) from an entry (by id). Returns err 404 if entry or
     /// tag not found. Idempotent. Removing a tag that exists but doesn't exist
     /// on the entry completes without error.
-    pub fn delete_tag_from_entry<T: Into<ID>, U: Into<ID>>(
+    pub async fn delete_tag_from_entry<T: Into<ID>, U: Into<ID>>(
         &mut self,
         entry_id: T,
         tag_id: U,
@@ -491,22 +495,22 @@ impl Client {
             EndPoint::DeleteEntryTag(entry_id.into(), tag_id.into()),
             UNIT,
             UNIT,
-        )
+        ).await
     }
 
     /// Get a list of all tags.
-    pub fn get_tags(&mut self) -> ClientResult<Tags> {
-        self.smart_json_q(Method::GET, EndPoint::Tags, UNIT, UNIT)
+    pub async fn get_tags(&mut self) -> ClientResult<Tags> {
+        self.smart_json_q(Method::GET, EndPoint::Tags, UNIT, UNIT).await
     }
 
     /// Permanently delete a tag by id. This removes the tag from all entries.
     /// Appears to return success if attempting to delete a tag by id that
     /// exists on the server but isn't accessible to the user.
-    pub fn delete_tag<T: Into<ID>>(&mut self, id: T) -> ClientResult<Tag> {
+    pub async fn delete_tag<T: Into<ID>>(&mut self, id: T) -> ClientResult<Tag> {
         let id = id.into();
 
         // api does not return id of deleted tag, hence the temporary struct
-        let dt: DeletedTag = self.smart_json_q(Method::DELETE, EndPoint::Tag(id), UNIT, UNIT)?;
+        let dt: DeletedTag = self.smart_json_q(Method::DELETE, EndPoint::Tag(id), UNIT, UNIT).await?;
 
         Ok(Tag {
             id,
@@ -522,12 +526,12 @@ impl Client {
     /// query.
     ///
     /// Note: this allows deleting a tag with a comma by label.
-    pub fn delete_tag_by_label<T: Into<String>>(&mut self, label: T) -> ClientResult<DeletedTag> {
+    pub async fn delete_tag_by_label<T: Into<String>>(&mut self, label: T) -> ClientResult<DeletedTag> {
         let mut params = HashMap::new();
         params.insert("tag".to_owned(), label.into());
 
         let deleted_tag: DeletedTag =
-            self.smart_json_q(Method::DELETE, EndPoint::TagLabel, &params, UNIT)?;
+            self.smart_json_q(Method::DELETE, EndPoint::TagLabel, &params, UNIT).await?;
         Ok(deleted_tag)
     }
 
@@ -542,7 +546,7 @@ impl Client {
     ///
     /// Returns a list of tags that were deleted (sans IDs). Returns 404 not
     /// found _only_ if _all_ tags were not found.
-    pub fn delete_tags_by_label(&mut self, tags: Vec<TagString>) -> ClientResult<Vec<DeletedTag>> {
+    pub async fn delete_tags_by_label(&mut self, tags: Vec<TagString>) -> ClientResult<Vec<DeletedTag>> {
         let mut params = HashMap::new();
         params.insert(
             "tags",
@@ -554,22 +558,22 @@ impl Client {
 
         // note: api doesn't return tag ids and no way to obtain since deleted
         // by label
-        self.smart_json_q(Method::DELETE, EndPoint::TagsLabel, &params, UNIT)
+        self.smart_json_q(Method::DELETE, EndPoint::TagsLabel, &params, UNIT).await
     }
 
     /// Get the API version. Probably not useful because if the version isn't v2
     /// then this library won't work anyway.
-    pub fn get_api_version(&mut self) -> ClientResult<String> {
-        self.smart_json_q(Method::GET, EndPoint::Version, UNIT, UNIT)
+    pub async fn get_api_version(&mut self) -> ClientResult<String> {
+        self.smart_json_q(Method::GET, EndPoint::Version, UNIT, UNIT).await
     }
 
     /// Get the currently logged in user information.
-    pub fn get_user(&mut self) -> ClientResult<User> {
-        self.smart_json_q(Method::GET, EndPoint::User, UNIT, UNIT)
+    pub async fn get_user(&mut self) -> ClientResult<User> {
+        self.smart_json_q(Method::GET, EndPoint::User, UNIT, UNIT).await
     }
 
     /// Register a user and create a client.
-    pub fn register_user(&mut self, info: &RegisterInfo) -> ClientResult<NewlyRegisteredInfo> {
-        self.json_q(Method::PUT, EndPoint::User, UNIT, info, false)
+    pub async fn register_user(&mut self, info: &RegisterInfo) -> ClientResult<NewlyRegisteredInfo> {
+        self.json_q(Method::PUT, EndPoint::User, UNIT, info, false).await
     }
 }

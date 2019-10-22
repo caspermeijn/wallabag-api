@@ -8,7 +8,8 @@ use std::env;
 use wallabag_api::types::Config;
 use wallabag_api::Client;
 
-pub fn main() {
+#[tokio::main]
+async fn main() {
     let config = Config {
         client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
         client_secret: env::var("WALLABAG_CLIENT_SECRET").expect("WALLABAG_CLIENT_SECRET not set"),
@@ -21,15 +22,15 @@ pub fn main() {
 
     let mut client = Client::new(config);
 
-    let res = client.get_user();
+    let res = client.get_user().await;
     println!("{:#?}", res);
 
-    // let res = client.get_entry(1801067);
+    // let res = client.get_entry(1801067).await;
     // println!("{:#?}", res);
 
     // thread::sleep(Duration::from_secs(5));
 
-    // let res = client.get_entry(1801067u32);
+    // let res = client.get_entry(1801067u32).await;
     // println!("{:#?}", res);
 
     // let entry = Entry {

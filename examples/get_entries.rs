@@ -3,7 +3,8 @@ use std::env;
 use wallabag_api::types::{Config, EntriesFilter, SortBy, SortOrder};
 use wallabag_api::Client;
 
-pub fn main() {
+#[tokio::main]
+async fn main() {
     let config = Config {
         client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
         client_secret: env::var("WALLABAG_CLIENT_SECRET").expect("WALLABAG_CLIENT_SECRET not set"),
@@ -26,7 +27,7 @@ pub fn main() {
         public: None,
     };
 
-    let response = client.get_entries_with_filter(&filter);
+    let response = client.get_entries_with_filter(&filter).await;
     match response {
         Err(e) => {
             println!("Error: {}", e);

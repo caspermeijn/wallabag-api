@@ -4,7 +4,8 @@ use std::result::Result;
 use wallabag_api::types::Config;
 use wallabag_api::Client;
 
-pub fn main() -> Result<(), ()> {
+#[tokio::main]
+async fn main() -> Result<(), ()> {
     let config = Config {
         client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
         client_secret: env::var("WALLABAG_CLIENT_SECRET").expect("WALLABAG_CLIENT_SECRET not set"),
@@ -18,7 +19,7 @@ pub fn main() -> Result<(), ()> {
     let mut client = Client::new(config);
 
     // example check multiple urls at once.
-    let res = client.check_urls_exist(vec!["https://example.com/".to_owned(), "bla".to_owned()]);
+    let res = client.check_urls_exist(vec!["https://example.com/".to_owned(), "bla".to_owned()]).await;
     println!("{:#?}", res);
 
     let url = std::env::args().nth(1).ok_or_else(|| {
@@ -26,7 +27,7 @@ pub fn main() -> Result<(), ()> {
         ()
     })?;
 
-    let res = client.check_url_exists(url.clone());
+    let res = client.check_url_exists(url.clone()).await;
 
     match res {
         Err(e) => {

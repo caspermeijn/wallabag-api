@@ -1,7 +1,7 @@
 //! # Wallabag API
 //!
-//! Provides full type-safe access to a [Wallabag](https://wallabag.org/) API server. Contains
-//! methods for creating, reading, modifying, and deleting entries, annotations, and tags.
+//! Provides full type-safe async access to a [Wallabag](https://wallabag.org/) API server.
+//! Contains methods for creating, reading, modifying, and deleting entries, annotations, and tags.
 //!
 //!
 //! Example code to retrieve and print all starred entries.
@@ -11,6 +11,7 @@
 //! use wallabag_api::types::{Config, EntriesFilter, SortBy, SortOrder};
 //! use wallabag_api::Client;
 //!
+//! #[tokio::main]
 //! pub fn main() {
 //!     let config = Config {
 //!         client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
@@ -34,7 +35,7 @@
 //!         public: None,
 //!     };
 //!
-//!     let response = client.get_entries_with_filter(&filter);
+//!     let response = client.get_entries_with_filter(&filter).await;
 //!     match response {
 //!         Err(e) => {
 //!             println!("Error: {}", e);

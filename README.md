@@ -11,6 +11,7 @@ Provides types and functions for interacting with a [Wallabag][wallabag] server 
 
 See the [documentation][docsrs] for usage information.
 
+NOTE: requires rust nightly until async/await lands in stable (soon!).
 
 ## supported API endpoints:
 
@@ -81,7 +82,7 @@ export WALLABAG_CLIENT_ID="client_id"
 export WALLABAG_CLIENT_SECRET="client_secret"
 export WALLABAG_USERNAME="username"
 export WALLABAG_PASSWORD="password"
-export WALLABAG_URL="https://framabag.org"
+export WALLABAG_URL="https://framabag.org" # must not end with trailing slash
 ```
 
 The examples include:
