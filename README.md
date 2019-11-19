@@ -11,8 +11,6 @@ Provides types and functions for interacting with a [Wallabag][wallabag] server 
 
 See the [documentation][docsrs] for usage information.
 
-NOTE: requires rust nightly until async/await lands in stable (soon!).
-
 ## supported API endpoints:
 
 All API endpoints are implemented except for the `/api/*/list{,s}`. I don't
