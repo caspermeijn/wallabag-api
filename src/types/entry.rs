@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::utils::serde::parse_intbool;
 
@@ -32,7 +33,7 @@ pub struct Entry {
     pub domain_name: Option<String>,
 
     /// Not sure what would be stored here. I haven't seen any entries with this set.
-    pub headers: Option<Vec<String>>,
+    pub headers: Option<HashMap<String, String>>,
 
     /// I'm guessing this is the status the server got when retrieving the content from the url.
     pub http_status: Option<String>,
@@ -131,7 +132,7 @@ pub(crate) struct DeletedEntry {
     pub content: Option<String>,
     pub created_at: DateTime<Utc>,
     pub domain_name: Option<String>,
-    pub headers: Option<Vec<String>>,
+    pub headers: Option<HashMap<String, String>>,
     pub http_status: Option<String>,
 
     #[serde(deserialize_with = "parse_intbool")]
