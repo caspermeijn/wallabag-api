@@ -32,7 +32,8 @@ pub struct Entry {
     /// The resolved domain name of the url. Could be None if the server couldn't resolve the url.
     pub domain_name: Option<String>,
 
-    /// Not sure what would be stored here. I haven't seen any entries with this set.
+    /// A map of header name -> header value. These appear to be headers from the original source
+    /// url.
     pub headers: Option<HashMap<String, String>>,
 
     /// I'm guessing this is the status the server got when retrieving the content from the url.
