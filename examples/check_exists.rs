@@ -19,7 +19,9 @@ async fn main() -> Result<(), ()> {
     let mut client = Client::new(config);
 
     // example check multiple urls at once.
-    let res = client.check_urls_exist(vec!["https://example.com/".to_owned(), "bla".to_owned()]).await;
+    let res = client
+        .check_urls_exist(vec!["https://example.com/".to_owned(), "bla".to_owned()])
+        .await;
     println!("{:#?}", res);
 
     let url = std::env::args().nth(1).ok_or_else(|| {

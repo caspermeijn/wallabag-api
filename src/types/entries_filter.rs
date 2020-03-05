@@ -49,6 +49,13 @@ pub struct EntriesFilter {
 
     /// None = all entries; true/false = entries which do or do not have a public link
     pub public: Option<bool>,
+
+    /// Set to `None` to accept server default (usually 30); otherwise set to number of items per
+    /// paginated page to request. Only need to change this if makes things more efficient for your
+    /// use case (will make a difference to number of requests made and size of responses).
+    /// Will result in a 404 error if set to 0.
+    #[serde(rename = "perPage")]
+    pub per_page: Option<u32>,
 }
 
 /// Used to serialize the tags list as a comma separated string.
@@ -72,6 +79,7 @@ impl Default for EntriesFilter {
             tags: vec![],
             since: 0,
             public: None,
+            per_page: None,
         }
     }
 }
@@ -102,6 +110,7 @@ mod tests {
             tags: vec![],
             since: 0,
             public: None,
+            per_page: None,
         };
         assert_eq!(filter.since, 0);
     }
