@@ -5,8 +5,8 @@ use std::fmt;
 
 use serde::Deserialize;
 use serde_urlencoded;
-use surf::{self, url};
 use surf::http::status::StatusCode;
+use surf::{self, url};
 
 pub type ClientResult<T> = std::result::Result<T, ClientError>;
 
