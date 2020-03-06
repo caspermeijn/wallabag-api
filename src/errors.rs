@@ -3,8 +3,10 @@
 use std::error::Error;
 use std::fmt;
 
-use reqwest::StatusCode;
 use serde::Deserialize;
+use serde_urlencoded;
+use surf::{self, url};
+use surf::http::status::StatusCode;
 
 pub type ClientResult<T> = std::result::Result<T, ClientError>;
 
@@ -31,11 +33,14 @@ pub struct CodeMessage {
 /// Represents all error possibilities that could be returned by the client.
 #[derive(Debug)]
 pub enum ClientError {
-    ReqwestError(reqwest::Error),
+    SurfException(surf::Exception),
     SerdeJsonError(serde_json::error::Error),
     Unauthorized(ResponseError),
     Forbidden(ResponseCodeMessageError),
     ExpiredToken,
+    IOError(std::io::Error),
+    UrlParseError(url::ParseError),
+    UrlEncodeError(serde_urlencoded::ser::Error),
     UnexpectedJsonStructure, // eg returned valid json but didn't fit model
     NotFound(ResponseCodeMessageError), // 404
     NotModified,             // 304
@@ -58,19 +63,36 @@ impl fmt::Display for ClientError {
 
 impl Error for ClientError {}
 
-// TODO: extract reqwest errors and turn them into more useful ClientErrors
-// TODO: maybe impl Error::cause to get the underlying reqwest or serde errors?
-
-// so we can use ? with reqwest in methods and still return ClientError
-impl From<reqwest::Error> for ClientError {
-    fn from(err: reqwest::Error) -> Self {
-        ClientError::ReqwestError(err)
-    }
-}
+// TODO: extract surf errors and turn them into more useful ClientErrors
+// TODO: maybe impl Error::cause to get the underlying surf or serde errors?
 
 impl From<serde_json::error::Error> for ClientError {
     fn from(err: serde_json::error::Error) -> Self {
         ClientError::SerdeJsonError(err)
+    }
+}
+
+impl From<std::io::Error> for ClientError {
+    fn from(err: std::io::Error) -> Self {
+        ClientError::IOError(err)
+    }
+}
+
+impl From<url::ParseError> for ClientError {
+    fn from(err: url::ParseError) -> Self {
+        ClientError::UrlParseError(err)
+    }
+}
+
+impl From<surf::Exception> for ClientError {
+    fn from(err: surf::Exception) -> Self {
+        ClientError::SurfException(err)
+    }
+}
+
+impl From<serde_urlencoded::ser::Error> for ClientError {
+    fn from(err: serde_urlencoded::ser::Error) -> Self {
+        ClientError::UrlEncodeError(err)
     }
 }
 

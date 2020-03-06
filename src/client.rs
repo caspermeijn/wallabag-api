@@ -5,9 +5,12 @@ use std::collections::HashMap;
 
 // extern crates
 use log::{debug, max_level, trace, LevelFilter};
-use reqwest::{self, Method, Response, StatusCode};
 use serde::de::DeserializeOwned;
 use serde::ser::Serialize;
+use surf::http::status::StatusCode;
+use surf::http::{self, Method};
+use surf::url::Url;
+use surf::{Request, Response};
 
 // local imports
 use crate::errors::{
@@ -30,8 +33,7 @@ pub struct Client {
     username: String,
     password: String,
     token_info: Option<TokenInfo>,
-    url: UrlBuilder,
-    client: reqwest::Client,
+    url_base: UrlBuilder,
 }
 
 impl Client {
@@ -43,8 +45,7 @@ impl Client {
             username: config.username,
             password: config.password,
             token_info: None,
-            url: UrlBuilder::new(config.base_url),
-            client: reqwest::Client::new(),
+            url_base: UrlBuilder::new(config.base_url),
         }
     }
 
@@ -116,7 +117,7 @@ impl Client {
         Ok(self
             .smart_q(method, end_point, query, json)
             .await?
-            .text()
+            .body_string()
             .await?)
     }
 
@@ -138,7 +139,7 @@ impl Client {
             let text = self
                 .smart_q(method, end_point, query, json)
                 .await?
-                .text()
+                .body_string()
                 .await?;
             match serde_json::from_str(&text) {
                 Ok(j) => {
@@ -154,7 +155,7 @@ impl Client {
             Ok(self
                 .smart_q(method, end_point, query, json)
                 .await?
-                .json()
+                .body_json()
                 .await?)
         }
     }
@@ -207,7 +208,7 @@ impl Client {
             let text = self
                 .q(method, end_point, query, json, use_token)
                 .await?
-                .text()
+                .body_string()
                 .await?;
             match serde_json::from_str(&text) {
                 Ok(j) => {
@@ -223,7 +224,7 @@ impl Client {
             Ok(self
                 .q(method, end_point, query, json, use_token)
                 .await?
-                .json()
+                .body_json()
                 .await?)
         }
     }
@@ -241,26 +242,28 @@ impl Client {
         J: Serialize + ?Sized,
         Q: Serialize + ?Sized,
     {
-        let url = self.url.build(end_point);
+        let url = self.url_base.build(end_point);
         trace!("Sending request to {}", url);
 
-        let mut request = self.client.request(method, &url).query(query).json(json);
+        let mut request = Request::new(method, Url::parse(&url)?)
+            .body_json(json)?
+            .set_query(query)?;
 
         if use_token {
             if let Some(ref t) = self.token_info {
-                request = request.header(
-                    reqwest::header::AUTHORIZATION,
+                request = request.set_header(
+                    http::header::AUTHORIZATION,
                     format!("Bearer {}", t.access_token.clone()),
                 );
             }
         }
 
-        let response = request.send().await?;
+        let mut response = request.await?;
 
         trace!("response status: {:?}", response.status());
         match response.status() {
             StatusCode::UNAUTHORIZED => {
-                let info: ResponseError = response.json().await?;
+                let info: ResponseError = response.body_json().await?;
                 if info.error_description.as_str().contains("expired") {
                     Err(ClientError::ExpiredToken)
                 } else {
@@ -268,11 +271,11 @@ impl Client {
                 }
             }
             StatusCode::FORBIDDEN => {
-                let info: ResponseCodeMessageError = response.json().await?;
+                let info: ResponseCodeMessageError = response.body_json().await?;
                 Err(ClientError::Forbidden(info))
             }
             StatusCode::NOT_FOUND => {
-                let info: ResponseCodeMessageError = match response.json().await {
+                let info: ResponseCodeMessageError = match response.body_json().await {
                     Ok(info) => info,
                     Err(_) => ResponseCodeMessageError {
                         error: CodeMessage {
@@ -288,7 +291,7 @@ impl Client {
                 Err(ClientError::NotModified)
             }
             status if status.is_success() => Ok(response),
-            status => Err(ClientError::Other(status, response.text().await?)),
+            status => Err(ClientError::Other(status, response.body_string().await?)),
         }
     }
 
