@@ -3,8 +3,7 @@ use std::env;
 use wallabag_api::types::{Config, EntriesFilter, SortBy, SortOrder};
 use wallabag_api::Client;
 
-#[tokio::main]
-async fn main() {
+async fn run_example() {
     let config = Config {
         client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
         client_secret: env::var("WALLABAG_CLIENT_SECRET").expect("WALLABAG_CLIENT_SECRET not set"),
@@ -17,7 +16,7 @@ async fn main() {
 
     let mut client = Client::new(config);
 
-    /// Only get starred entries
+    // Only get starred entries
     let filter = EntriesFilter {
         archive: None,
         starred: Some(true),
@@ -46,4 +45,8 @@ async fn main() {
             }
         }
     }
+}
+
+fn main() {
+    async_std::task::block_on(run_example())
 }

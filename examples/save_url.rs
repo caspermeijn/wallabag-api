@@ -4,8 +4,7 @@ use std::result::Result;
 use wallabag_api::types::{Config, NewEntry};
 use wallabag_api::Client;
 
-#[tokio::main]
-async fn main() -> Result<(), ()> {
+async fn run_example() -> Result<(), ()> {
     let config = Config {
         client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
         client_secret: env::var("WALLABAG_CLIENT_SECRET").expect("WALLABAG_CLIENT_SECRET not set"),
@@ -40,4 +39,8 @@ async fn main() -> Result<(), ()> {
             Ok(())
         }
     }
+}
+
+fn main() -> Result<(), ()> {
+    async_std::task::block_on(run_example())
 }
