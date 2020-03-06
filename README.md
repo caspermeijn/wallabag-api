@@ -91,6 +91,8 @@ The examples include:
   out small examples, used for manual testing... have fun experimenting!
 - [get_entries](examples/get_entries.rs): simply retrieve and debug print all
   entries. See the source code for filtering options.
+- [get_entries_page](examples/get_entries_page.rs): example fetching a single
+  page of entries without auto handling pagination.
 - [save_url](examples/save_url.rs): save a url to the server, printing the
   created entry on success.
 

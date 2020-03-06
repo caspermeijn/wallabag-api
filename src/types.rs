@@ -25,7 +25,7 @@ pub use self::common::ID;
 pub(crate) use self::entries_filter::RequestEntriesFilter;
 pub use self::entries_filter::{EntriesFilter, SortBy, SortOrder};
 pub(crate) use self::entry::{DeletedEntry, PaginatedEntries};
-pub use self::entry::{Entries, Entry};
+pub use self::entry::{Entries, EntriesPage, Entry};
 pub use self::format::Format;
 pub use self::new_entry::NewEntry;
 pub use self::patch_entry::PatchEntry;
