@@ -18,9 +18,9 @@ use crate::errors::{
 };
 use crate::types::{
     Annotation, AnnotationRows, Annotations, Config, DeletedEntry, DeletedTag, Entries,
-    EntriesFilter, EntriesPage, Entry, ExistsInfo, ExistsResponse, Format, NewAnnotation, NewEntry,
-    NewlyRegisteredInfo, PaginatedEntries, PatchEntry, RegisterInfo, RequestEntriesFilter, Tag,
-    TagString, Tags, TokenInfo, User, ID, UNIT,
+    EntriesExistParams, EntriesFilter, EntriesPage, Entry, ExistsInfo, ExistsResponse, Format,
+    NewAnnotation, NewEntry, NewlyRegisteredInfo, PaginatedEntries, PatchEntry, RegisterInfo,
+    RequestEntriesFilter, Tag, TagString, Tags, TokenInfo, User, ID, UNIT,
 };
 use crate::utils::{EndPoint, UrlBuilder};
 
@@ -305,15 +305,13 @@ impl Client {
         &mut self,
         urls: Vec<T>,
     ) -> ClientResult<ExistsInfo> {
-        let mut params = vec![];
-        params.push(("return_id".to_owned(), "1".to_owned()));
-
-        // workaround: need to structure the params as a list of pairs since Vec
-        // values are unsupported:
-        // https://github.com/nox/serde_urlencoded/issues/46
-        for url in urls {
-            params.push(("urls[]".to_owned(), url.into()));
-        }
+        let params = EntriesExistParams {
+            return_id: 1,
+            urls: urls
+                .into_iter()
+                .map(|url| url.into())
+                .collect::<Vec<String>>(),
+        };
 
         self.smart_json_q(Method::Get, EndPoint::Exists, &params, UNIT)
             .await
