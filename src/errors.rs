@@ -5,8 +5,8 @@ use std::fmt;
 
 use serde::Deserialize;
 use serde_urlencoded;
-use surf::http::status::StatusCode;
-use surf::{self, url};
+use surf::http::StatusCode;
+use surf::{self, http::url};
 
 pub type ClientResult<T> = std::result::Result<T, ClientError>;
 
@@ -33,7 +33,7 @@ pub struct CodeMessage {
 /// Represents all error possibilities that could be returned by the client.
 #[derive(Debug)]
 pub enum ClientError {
-    SurfException(surf::Exception),
+    SurfError(surf::Error),
     SerdeJsonError(serde_json::error::Error),
     Unauthorized(ResponseError),
     Forbidden(ResponseCodeMessageError),
@@ -84,9 +84,9 @@ impl From<url::ParseError> for ClientError {
     }
 }
 
-impl From<surf::Exception> for ClientError {
-    fn from(err: surf::Exception) -> Self {
-        ClientError::SurfException(err)
+impl From<surf::Error> for ClientError {
+    fn from(err: surf::Error) -> Self {
+        ClientError::SurfError(err)
     }
 }
 

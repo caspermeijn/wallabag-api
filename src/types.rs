@@ -15,6 +15,7 @@ mod entry;
 mod format;
 mod new_entry;
 mod patch_entry;
+mod query;
 mod tags;
 mod user;
 
@@ -29,6 +30,7 @@ pub use self::entry::{Entries, EntriesPage, Entry};
 pub use self::format::Format;
 pub use self::new_entry::NewEntry;
 pub use self::patch_entry::PatchEntry;
+pub(crate) use self::query::EntriesExistParams;
 pub use self::tags::{DeletedTag, Tag, TagString, Tags};
 pub use self::user::{NewlyRegisteredInfo, RegisterInfo, User};
 
