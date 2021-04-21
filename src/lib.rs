@@ -5,14 +5,13 @@
 //!
 //!
 //! Example code to retrieve and print all starred entries.
-//! ```notrust
+//! ```no_run
 //! use std::env;
 //!
 //! use wallabag_api::types::{Config, EntriesFilter, SortBy, SortOrder};
 //! use wallabag_api::Client;
 //!
-//! #[tokio::main]
-//! pub fn main() {
+//! async fn run_example() {
 //!     let config = Config {
 //!         client_id: env::var("WALLABAG_CLIENT_ID").expect("WALLABAG_CLIENT_ID not set"),
 //!         client_secret: env::var("WALLABAG_CLIENT_SECRET").expect("WALLABAG_CLIENT_SECRET not set"),
@@ -33,6 +32,7 @@
 //!         tags: vec![],
 //!         since: 0,
 //!         public: None,
+//!         per_page: None,
 //!     };
 //!
 //!     let response = client.get_entries_with_filter(&filter).await;
@@ -52,6 +52,10 @@
 //!             }
 //!         }
 //!     }
+//! }
+//!
+//! fn main() {
+//!    async_std::task::block_on(run_example())
 //! }
 //! ```
 
