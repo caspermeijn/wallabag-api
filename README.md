@@ -96,6 +96,12 @@ The examples include:
 - [save_url](examples/save_url.rs): save a url to the server, printing the
   created entry on success.
 
+## Contributing
+
+Please send your comments, bug reports, feature requests,
+and patches to this public mailing list:
+~swalladge/public-inbox@lists.sr.ht ([archives](https://lists.sr.ht/~swalladge/public-inbox)).
+
 ## License
 
 Licensed under either of
@@ -105,11 +111,6 @@ Licensed under either of
 
 at your option.
 
-### Contribution
-
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in the work by you, as defined in the Apache-2.0 license, shall
-be dual licensed as above, without any additional terms or conditions.
 
 
 [wallabag]: https://wallabag.org/
