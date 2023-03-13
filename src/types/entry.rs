@@ -2,6 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::utils::serde::parse_hashmap_with_null_values;
 use crate::utils::serde::parse_intbool;
 
 use super::annotations::Annotations;
@@ -34,6 +35,7 @@ pub struct Entry {
 
     /// A map of header name -> header value. These appear to be headers from the original source
     /// url.
+    #[serde(deserialize_with = "parse_hashmap_with_null_values")]
     pub headers: Option<HashMap<String, String>>,
 
     /// I'm guessing this is the status the server got when retrieving the content from the url.
@@ -214,4 +216,104 @@ pub struct EntriesPage {
 
     /// The list of entries returned.
     pub entries: Entries,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_entry_header_with_string_value() {
+        let text = r###"{
+            "is_archived": 1,
+            "is_starred": 0,
+            "user_name": "sibben",
+            "user_email": "detlef@posteo.org",
+            "user_id": 15568,
+            "tags": [],
+            "is_public": false,
+            "id": 10849650,
+            "uid": null,
+            "title": "Klettenwurzel\u00f6l",
+            "url": "https:\/\/oelerini.com\/klettenwurzeloel",
+            "hashed_url": "baff1dd17cb2cc15578cb9b6955971dfb8ada45a",
+            "origin_url": null,
+            "given_url": "https:\/\/oelerini.com\/klettenwurzeloel",
+            "hashed_given_url": "baff1dd17cb2cc15578cb9b6955971dfb8ada45a",
+            "archived_at": "2020-02-12T10:20:58+0100",
+            "content": "Dummy content",
+            "created_at": "2019-01-14T18:16:36+0100",
+            "updated_at": "2020-02-12T10:20:58+0100",
+            "published_at": null,
+            "published_by": null,
+            "starred_at": null,
+            "annotations": [],
+            "mimetype": "text\/html",
+            "language": "de",
+            "reading_time": 12,
+            "domain_name": "oelerini.com",
+            "preview_picture": "https:\/\/oelerini.com\/img\/klettenwurzeloel.jpg",
+            "http_status": null,
+            "headers": {
+                "content-type": "text\/html"
+            },
+            "_links": {
+                "self": {
+                    "href": "\/api\/entries\/10849650"
+                }
+            }
+        }
+        "###;
+        let entry: Entry = serde_json::from_str(&text).unwrap();
+        assert_eq!(
+            entry.headers,
+            Some(HashMap::from([("content-type".into(), "text/html".into())]))
+        );
+    }
+
+    #[test]
+    fn test_entry_header_with_null_value() {
+        let text = r###"{
+            "is_archived": 1,
+            "is_starred": 0,
+            "user_name": "sibben",
+            "user_email": "detlef@posteo.org",
+            "user_id": 15568,
+            "tags": [],
+            "is_public": false,
+            "id": 10849669,
+            "uid": null,
+            "title": "Erfahrungen beim Jurtenaufbau Es geht auch zu zweit!",
+            "url": "https:\/\/www.jurte.com\/de\/berichte\/ammertal.html",
+            "hashed_url": "f3c65c41ecef84d95e7a7afc12dbebdd04a8a471",
+            "origin_url": null,
+            "given_url": "https:\/\/www.jurte.com\/de\/berichte\/ammertal.html",
+            "hashed_given_url": "f3c65c41ecef84d95e7a7afc12dbebdd04a8a471",
+            "archived_at": "2020-02-12T10:20:59+0100",
+            "content": "wallabag can't retrieve contents for this article. Please <a href=\"http:\/\/doc.wallabag.org\/en\/user\/errors_during_fetching.html#how-can-i-help-to-fix-that\">troubleshoot this issue<\/a>.",
+            "created_at": "2018-08-23T22:28:58+0200",
+            "updated_at": "2020-02-12T10:20:59+0100",
+            "published_at": null,
+            "published_by": null,
+            "starred_at": null,
+            "annotations": [],
+            "mimetype": null,
+            "language": null,
+            "reading_time": 0,
+            "domain_name": "www.jurte.com",
+            "preview_picture": "https:\/\/www.jurte.com\/images\/ammertal\/aushub_192.jpg",
+            "http_status": null,
+            "headers": {
+                "content-type": null
+            },
+            "_links": {
+                "self": {
+                    "href": "\/api\/entries\/10849669"
+                }
+            }
+        }
+        "###;
+        let entry: Entry = serde_json::from_str(&text).unwrap();
+        assert_eq!(entry.headers, Some(HashMap::from([])));
+    }
 }

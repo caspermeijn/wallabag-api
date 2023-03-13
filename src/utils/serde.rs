@@ -1,6 +1,8 @@
 //! Custom utility functions to help with serializing/deserializing values from the API that want
 //! to be difficult.
 
+use std::collections::HashMap;
+
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serializer};
 
@@ -72,4 +74,22 @@ where
             ))),
         },
     }
+}
+
+/// Parser for a hashmap where null values are skipped
+pub(crate) fn parse_hashmap_with_null_values<'de, D>(d: D) -> Result<Option<HashMap<String, String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let x = Option::<HashMap::<String, Option<String>>>::deserialize(d)?;
+
+    Ok(x.map(|hash_map| {
+        hash_map.iter().filter_map(|(key, value)| {
+            if let Some(value) = value {
+                Some((key.clone(), value.clone()))
+            } else {
+                None
+            }
+        }).collect()
+    }))
 }
