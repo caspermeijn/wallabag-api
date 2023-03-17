@@ -84,9 +84,9 @@ where
     let x = Option::<HashMap::<String, Option<String>>>::deserialize(d)?;
 
     Ok(x.map(|hash_map| {
-        hash_map.iter().filter_map(|(key, value)| {
+        hash_map.into_iter().filter_map(|(key, value)| {
             if let Some(value) = value {
-                Some((key.clone(), value.clone()))
+                Some((key, value))
             } else {
                 None
             }
