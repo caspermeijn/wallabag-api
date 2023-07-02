@@ -1,3 +1,6 @@
+// Copyright 2018 Samuel Walladge <samuel@swalladge.net>
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use serde::Serialize;
 use serde::Serializer;
 use std::result::Result;
