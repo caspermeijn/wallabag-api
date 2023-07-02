@@ -1,3 +1,6 @@
+// Copyright 2018 Samuel Walladge <samuel@swalladge.net>
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! # Wallabag API
 //!
 //! Provides full type-safe async access to a [Wallabag](https://wallabag.org/) API server.

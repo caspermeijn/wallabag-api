@@ -1,3 +1,7 @@
+// Copyright 2018 Samuel Walladge <samuel@swalladge.net>
+// Copyright 2021 Pablo Baeyens <pbaeyens31+github@gmail.com>
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Client.
 
 // std libs

@@ -1,3 +1,6 @@
+// Copyright 2018 Samuel Walladge <samuel@swalladge.net>
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

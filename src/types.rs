@@ -1,3 +1,6 @@
+// Copyright 2018 Samuel Walladge <samuel@swalladge.net>
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! All types used by the client. Some are returned by the client and shouldn't
 //! need to be created manually, while others are designed to be created and
 //! passed to client methods (eg. creating new entries).

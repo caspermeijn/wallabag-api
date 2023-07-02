@@ -1,3 +1,7 @@
+// Copyright 2018 Samuel Walladge <samuel@swalladge.net>
+// Copyright 2023 Casper Meijn <casper@meijn.net>
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Custom utility functions to help with serializing/deserializing values from the API that want
 //! to be difficult.
 
