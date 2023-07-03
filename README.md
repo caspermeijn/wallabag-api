@@ -5,6 +5,7 @@
 
 [![wallabag-api crates.io][cratesio-image]][cratesio]
 [![wallabag-api docs.rs][docsrs-image]][docsrs]
+[![maintenance-status: passively-maintained][maintenance-status-image]][maintenance-status]
 
 Provides types and functions for interacting with a [Wallabag][wallabag] server API.
 
@@ -120,3 +121,5 @@ at your option.
 [docsrs]: https://docs.rs/wallabag-api
 [cratesio-image]: https://img.shields.io/crates/v/wallabag-api.svg
 [cratesio]: https://crates.io/crates/wallabag-api
+[maintenance-status-image]: https://img.shields.io/badge/maintenance--status-passively--maintained-forestgreen
+[maintenance-status]: https://gist.github.com/rusty-snake/574a91f1df9f97ec77ca308d6d731e29
