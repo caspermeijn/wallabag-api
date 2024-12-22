@@ -1,15 +1,14 @@
 // Copyright 2018 Samuel Walladge <samuel@swalladge.net>
+// Copyright 2024 Casper Meijn <casper@meijn.net>
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! Client error types.
-
-use std::error::Error;
-use std::fmt;
 
 use serde::Deserialize;
 use serde_urlencoded;
 use surf::http::StatusCode;
 use surf::{self, http::url};
+use thiserror::Error;
 
 pub type ClientResult<T> = std::result::Result<T, ClientError>;
 
@@ -34,58 +33,36 @@ pub struct CodeMessage {
 }
 
 /// Represents all error possibilities that could be returned by the client.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum ClientError {
+    #[error("HTTP operation failed")]
     SurfError(surf::Error),
-    SerdeJsonError(serde_json::error::Error),
+    #[error("Error deserializing json")]
+    SerdeJsonError(#[from] serde_json::error::Error),
+    #[error("Unauthorized")]
     Unauthorized(ResponseError),
+    #[error("Forbidden")]
     Forbidden(ResponseCodeMessageError),
+    #[error("Token is expired")]
     ExpiredToken,
-    IOError(std::io::Error),
-    UrlParseError(url::ParseError),
-    UrlEncodeError(serde_urlencoded::ser::Error),
-    UnexpectedJsonStructure, // eg returned valid json but didn't fit model
-    NotFound(ResponseCodeMessageError), // 404
-    NotModified,             // 304
-    Other(StatusCode, String), // ¯\_(ツ)_/¯
+    #[error("IO error")]
+    IOError(#[from] std::io::Error),
+    #[error("URL parse error")]
+    UrlParseError(#[from] url::ParseError),
+    #[error("URL encode error")]
+    UrlEncodeError(#[from] serde_urlencoded::ser::Error),
+    #[error("Unexpected JSON structure, eg returned valid json but didn't fit model")]
+    UnexpectedJsonStructure,
+    #[error("Resource not found")]
+    NotFound(ResponseCodeMessageError),
+    #[error("Resource not modified")]
+    NotModified,
+    #[error("Unknown status code")]
+    Other(StatusCode, String),
 }
-
-impl fmt::Display for ClientError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use self::ClientError::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                SerdeJsonError(e) => format!("Error deserializing json: {}", e),
-                e => format!("{:?}", e),
-            }
-        )
-    }
-}
-
-impl Error for ClientError {}
 
 // TODO: extract surf errors and turn them into more useful ClientErrors
 // TODO: maybe impl Error::cause to get the underlying surf or serde errors?
-
-impl From<serde_json::error::Error> for ClientError {
-    fn from(err: serde_json::error::Error) -> Self {
-        ClientError::SerdeJsonError(err)
-    }
-}
-
-impl From<std::io::Error> for ClientError {
-    fn from(err: std::io::Error) -> Self {
-        ClientError::IOError(err)
-    }
-}
-
-impl From<url::ParseError> for ClientError {
-    fn from(err: url::ParseError) -> Self {
-        ClientError::UrlParseError(err)
-    }
-}
 
 impl From<surf::Error> for ClientError {
     fn from(err: surf::Error) -> Self {
@@ -93,28 +70,9 @@ impl From<surf::Error> for ClientError {
     }
 }
 
-impl From<serde_urlencoded::ser::Error> for ClientError {
-    fn from(err: serde_urlencoded::ser::Error) -> Self {
-        ClientError::UrlEncodeError(err)
-    }
-}
-
 /// Represents possible errors building a `TagString`.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum TagStringError {
+    #[error("Contains comma (invalid character)")]
     ContainsComma,
 }
-
-impl fmt::Display for TagStringError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                TagStringError::ContainsComma => "Contains comma (invalid character)",
-            }
-        )
-    }
-}
-
-impl Error for TagStringError {}
