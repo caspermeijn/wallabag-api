@@ -1,0 +1,17 @@
+# Copyright (C) 2024 Casper Meijn <casper@meijn.net>
+# SPDX-License-Identifier: CC0-1.0
+
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build(deps)"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build(deps)"
