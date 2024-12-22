@@ -62,7 +62,6 @@
 //! }
 //! ```
 
-#![allow(clippy::needless_borrow)]
 #![allow(dead_code)]
 
 mod client;
