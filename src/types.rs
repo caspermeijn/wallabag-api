@@ -41,9 +41,6 @@ pub use self::user::{NewlyRegisteredInfo, RegisterInfo, User};
 #[derive(Deserialize, Debug)]
 pub(crate) struct TokenInfo {
     pub access_token: String,
-    pub expires_in: u32,
-    pub token_type: String,
-    pub scope: Option<String>,
     pub refresh_token: String,
 }
 
