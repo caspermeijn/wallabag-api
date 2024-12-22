@@ -81,19 +81,24 @@ where
 }
 
 /// Parser for a hashmap where null values are skipped
-pub(crate) fn parse_hashmap_with_null_values<'de, D>(d: D) -> Result<Option<HashMap<String, String>>, D::Error>
+pub(crate) fn parse_hashmap_with_null_values<'de, D>(
+    d: D,
+) -> Result<Option<HashMap<String, String>>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let x = Option::<HashMap::<String, Option<String>>>::deserialize(d)?;
+    let x = Option::<HashMap<String, Option<String>>>::deserialize(d)?;
 
     Ok(x.map(|hash_map| {
-        hash_map.into_iter().filter_map(|(key, value)| {
-            if let Some(value) = value {
-                Some((key, value))
-            } else {
-                None
-            }
-        }).collect()
+        hash_map
+            .into_iter()
+            .filter_map(|(key, value)| {
+                if let Some(value) = value {
+                    Some((key, value))
+                } else {
+                    None
+                }
+            })
+            .collect()
     }))
 }

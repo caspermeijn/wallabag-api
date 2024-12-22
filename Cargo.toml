@@ -5,7 +5,10 @@
 name = "wallabag-api"
 edition = "2018"
 version = "0.4.3"
-authors = ["Casper Meijn <casper@meijn.net>", "Samuel Walladge <samuel@swalladge.net>"]
+authors = [
+  "Casper Meijn <casper@meijn.net>",
+  "Samuel Walladge <samuel@swalladge.net>",
+]
 license = "MIT OR Apache-2.0"
 description = "Client API library for Wallabag"
 repository = "https://github.com/caspermeijn/wallabag-api"
