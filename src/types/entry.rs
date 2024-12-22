@@ -267,7 +267,7 @@ mod tests {
             }
         }
         "###;
-        let entry: Entry = serde_json::from_str(&text).unwrap();
+        let entry: Entry = serde_json::from_str(text).unwrap();
         assert_eq!(
             entry.headers,
             Some(HashMap::from([("content-type".into(), "text/html".into())]))
@@ -316,7 +316,7 @@ mod tests {
             }
         }
         "###;
-        let entry: Entry = serde_json::from_str(&text).unwrap();
+        let entry: Entry = serde_json::from_str(text).unwrap();
         assert_eq!(entry.headers, Some(HashMap::from([])));
     }
 }
