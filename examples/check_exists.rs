@@ -28,7 +28,6 @@ async fn run_example() -> Result<(), ()> {
 
     let url = std::env::args().nth(1).ok_or_else(|| {
         println!("Usage: check_exists <url>");
-        ()
     })?;
 
     let res = client.check_url_exists(url.clone()).await;
