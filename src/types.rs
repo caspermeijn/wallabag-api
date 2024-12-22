@@ -68,7 +68,7 @@ pub struct Config {
 /// then that url doesn't exist in the db.
 pub type ExistsInfo = HashMap<String, Option<ID>>;
 
-/// Internal struct for deserializing a response upon checking the existance of
+/// Internal struct for deserializing a response upon checking the existence of
 /// a url.
 #[derive(Deserialize, Debug)]
 pub(crate) struct ExistsResponse {
