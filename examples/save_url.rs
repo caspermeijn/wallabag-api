@@ -22,7 +22,6 @@ async fn run_example() -> Result<(), ()> {
 
     let url = std::env::args().nth(1).ok_or_else(|| {
         println!("Usage: save_url <url>");
-        ()
     })?;
 
     let entry = NewEntry::new_with_url(url);
