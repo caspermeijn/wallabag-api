@@ -180,7 +180,7 @@ impl Client {
         // ensure the token is populated. bit of a hack to avoid calling get_token from inside
         // self.q (causes async recursion otherwise). Will fix sometime.
         let _ = self.get_token().await?;
-        let response_result = self.q(method.clone(), end_point, query, json, true).await;
+        let response_result = self.q(method, end_point, query, json, true).await;
 
         if let Err(ClientError::ExpiredToken) = response_result {
             debug!("Token expired; refreshing");

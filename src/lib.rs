@@ -62,7 +62,6 @@
 //! }
 //! ```
 
-#![allow(clippy::clone_on_copy)]
 #![allow(clippy::needless_borrow)]
 #![allow(dead_code)]
 
