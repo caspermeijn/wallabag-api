@@ -625,7 +625,7 @@ impl Client {
     /// Permanently batch delete tags by labels (tag names). Returns not found
     /// if _all_ labels not found. If at least one found, then returns ok. For
     /// some reason, (at least the framabag instance) the server returns success
-    /// and the tag data on attempting to delete for innaccessible tags (tags by
+    /// and the tag data on attempting to delete for inaccessible tags (tags by
     /// other users?).
     ///
     /// This method requires that tag names not contain commas. If you need to
