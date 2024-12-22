@@ -62,6 +62,11 @@
 //! }
 //! ```
 
+#![allow(clippy::manual_map)]
+#![allow(clippy::clone_on_copy)]
+#![allow(clippy::needless_borrow)]
+#![allow(dead_code)]
+
 mod client;
 pub mod errors;
 pub mod types;
