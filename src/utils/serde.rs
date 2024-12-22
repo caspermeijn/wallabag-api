@@ -93,11 +93,8 @@ where
         hash_map
             .into_iter()
             .filter_map(|(key, value)| {
-                if let Some(value) = value {
-                    Some((key, value))
-                } else {
-                    None
-                }
+                // Remove `Option<>` and drop any `None` values
+                value.map(|value| (key, value))
             })
             .collect()
     }))
